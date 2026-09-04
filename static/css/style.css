@@ -75,8 +75,7 @@ h1,
 }
 
 .site-header nav a:hover {
-    color: var(--accent);
-    /* Mengubah warna saat di-hover mouse */
+    color: var(--accent); /* Mengubah warna saat di-hover mouse */
 }
 
 .hero {
