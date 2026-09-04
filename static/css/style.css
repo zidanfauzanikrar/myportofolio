@@ -9,8 +9,10 @@
     --paper: #faf6f0;
     --accent: #d95d39;
     --accent-dark: #a8442a;
+    --accent-light: #ffd7b2;
     --line: #e3d9c9;
     --text-muted: #6b6459;
+    --text-less-muted: #4b4439;
     --radius: 4px;
 }
 
@@ -21,8 +23,14 @@ body {
     line-height: 1.6;
 }
 
-h1, .brand {
+h1,
+.brand {
     font-family: "Space Grotesk", -apple-system, sans-serif;
+    transition: color 0.3s ease;
+}
+
+.brand:hover {
+    color: var(--accent);
 }
 
 .container {
@@ -32,7 +40,17 @@ h1, .brand {
 }
 
 .site-header {
-    border-bottom: 1px solid var(--line);
+    /*border-bottom: 1px solid var(--line);*/
+    position: sticky;
+    /* Membuat header menempel di layar */
+    top: 0;
+    /* Menempel tepat di batas paling atas (0) */
+    background-color: var(--paper);
+    /* Penting: Memberi warna latar agar teks di bawahnya tidak tembus pandang saat di-scroll */
+    z-index: 100;
+    /* Memastikan header selalu tampil di tumpukan paling depan */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    /* Memberikan efek bayangan tipis yang elegan di bawah garis */
 }
 
 .site-header .container {
@@ -58,6 +76,15 @@ h1, .brand {
     color: var(--ink);
     text-decoration: none;
     font-size: 0.95rem;
+    font-weight: 500;
+    /* Membuat teks menu sedikit lebih tebal */
+    transition: color 0.3s ease;
+    /* Membuat efek perubahan warna memakan waktu 0.3 detik (lebih halus) */
+}
+
+.site-header nav a:hover {
+    color: var(--accent);
+    /* Mengubah warna menjadi oranye kemerahan saat dilintasi mouse */
 }
 
 .hero {
@@ -192,4 +219,73 @@ h1, .brand {
     .social-links {
         justify-content: flex-start;
     }
+}
+
+.portfolio-section {
+    padding: 5rem 0;
+    /* Memberi jarak kosong di atas dan bawah section ini */
+    border-top: 1px solid var(--line);
+    /* Membuat garis tipis pembatas dengan section sebelumnya */
+}
+
+.section-title {
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    /* Menyamakan jenis font */
+    font-size: 2rem;
+    /* Membesarkan ukuran huruf */
+    margin-bottom: 1.8rem;
+    /* Jarak section ke kotak */
+    position: relative;
+    /* Patokan untuk garis bawah */
+    display: inline-block;
+    /* Kotak judul */
+}
+
+.section-title::after {
+    content: "";
+    /* Elemen imajiner */
+    position: absolute;
+    /* Posisi bebas diatur tapi menempel pada judul */
+    left: 0;
+    /* Dimulai dari paling kiri teks */
+    bottom: -6px;
+    /* Jarak garis bawah dengan teks */
+
+    width: 60%;
+    /* Panjang garis sebagian dari tulisan */
+    height: 4px;
+    /* Ketebalan garis */
+    background-color: var(--accent);
+    /* Warna garis */
+    border-radius: 2px;
+    /* Agar ujung garis tumpul */
+}
+
+.experience-card {
+    background-color: var(--accent-light);
+    /* Warna latar kotak */
+    padding: 1.5rem;
+    /* Jarak ke dalam */
+    border-radius: var(--radius);
+    /* Agar sudut kotak melengkung */
+    border: 2px solid var(--line);
+    /* Garis pinggir tipis pada kotak */
+    margin-bottom: 1rem;
+    /* Jarak antarkotak */
+}
+
+.experience-card h3 {
+    color: var(--accent-dark);
+    /* Warna teks judul tiap kotak */
+    margin-bottom: 0.5rem;
+    /* Jarak antara judul dan deskripsi kotak */
+}
+
+.experience-card p {
+    color: var(--text-less-muted);
+    /* Warna teks paragraf tiap kotak */
+    font-size: 0.95rem;
+    /* Ukuran teks paragraf tiap kotak */
+    line-height: 1.7;
+    /* Jarak antarbaris teks paragraf tiap kotak */
 }
