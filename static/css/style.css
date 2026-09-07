@@ -213,10 +213,8 @@ h1,
 }
 
 .portfolio-section {
-    padding: 5rem 0;
-    /* Memberi jarak kosong di atas dan bawah section ini */
-    border-top: 1px solid var(--line);
-    /* Membuat garis tipis pembatas dengan section sebelumnya */
+    padding: 5rem 0; /* Memberi jarak kosong di atas dan bawah section ini */
+    border-top: 1px solid var(--line); /* Membuat garis tipis pembatas dengan section sebelumnya */
 }
 
 .section-title {
