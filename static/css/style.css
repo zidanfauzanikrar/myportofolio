@@ -237,7 +237,7 @@ h1,
     border-radius: 2px; /* Agar ujung garis tumpul */
 }
 
-.experience-card {
+.experience_card {
     background-color: var(--accent-light); /* Warna latar kotak */
     padding: 1.5rem; /* Jarak ke dalam */
     border-radius: var(--radius); /* Agar sudut kotak melengkung */
@@ -245,13 +245,67 @@ h1,
     margin-bottom: 1rem; /* Jarak antarkotak */
 }
 
-.experience-card h3 {
+.experience_card h3 {
     color: var(--accent-dark); /* Warna teks judul tiap kotak */
     margin-bottom: 0.5rem; /* Jarak antara judul dan deskripsi kotak */
 }
 
-.experience-card p {
+.experience_card p {
     color: var(--text-less-muted); /* Warna teks paragraf tiap kotak */
     font-size: 0.95rem; /* Ukuran teks paragraf tiap kotak */
     line-height: 1.7; /* Jarak antarbaris teks paragraf tiap kotak */
+}
+
+.experience-section {
+    padding: 4rem 0;
+    border-top: 1px solid var(--line);
+}
+
+.section-kicker {
+    color: var(--accent-dark);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.experience-section h1 {
+    margin: 0.4rem 0 1.5rem;
+    font-size: 2rem;
+}
+
+.experience-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.experience-card {
+    padding: 1.25rem;
+    background-color: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+}
+
+.experience-category {
+    color: var(--accent-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.experience-card h2 {
+    margin: 0.5rem 0;
+    font-size: 1.25rem;
+}
+
+.experience-description,
+.empty-state {
+    color: var(--text-muted);
+}
+
+.experience-status {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
