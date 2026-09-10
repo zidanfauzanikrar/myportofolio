@@ -24,26 +24,26 @@
     </header>
 
     <main>
-    <section class="skill-section" id="skill">
+    <section class="portofolio-section" id="skill">
         <div class="container">
             <p class="section-kicker">What I'm capable of</p>
             <h1>Skills</h1>
 
-            <div class="skill-grid">
+            <div class="portofolio-grid">
                 {% for skill in skill_list %}
-                    <article class="skill-card">
-                        <span class="skill-category">
+                    <article class="portofolio-card">
+                        <span class="portofolio-category">
                             {{ skill.get_category_display }}
                         </span>
                         <h2>{{ skill.title }}</h2>
-                        <p class="skill-description">
+                        <p class="portofolio-description">
                             {{ skill.description }}
                         </p>
 
                     </article>
                 {% empty %}
                     <p class="empty-state">
-                        No skill has been added yet.
+                        No skills has been added yet.
                     </p>
                 {% endfor %}
             </div>

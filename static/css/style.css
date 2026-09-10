@@ -212,7 +212,7 @@ h1,
     }
 }
 
-.portfolio-section {
+.portfolio_section {
     padding: 5rem 0; /* Memberi jarak kosong di atas dan bawah section ini */
     border-top: 1px solid var(--line); /* Membuat garis tipis pembatas dengan section sebelumnya */
 }
@@ -256,7 +256,7 @@ h1,
     line-height: 1.7; /* Jarak antarbaris teks paragraf tiap kotak */
 }
 
-.experience-section {
+.portofolio-section {
     padding: 4rem 0;
     border-top: 1px solid var(--line);
 }
@@ -269,37 +269,37 @@ h1,
     text-transform: uppercase;
 }
 
-.experience-section h1 {
+.portofolio-section h1 {
     margin: 0.4rem 0 1.5rem;
     font-size: 2rem;
 }
 
-.experience-grid {
+.portofolio-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1rem;
 }
 
-.experience-card {
+.portofolio-card {
     padding: 1.25rem;
     background-color: #fff;
     border: 1px solid var(--line);
     border-radius: var(--radius);
 }
 
-.experience-category {
+.portofolio-category {
     color: var(--accent-dark);
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
 }
 
-.experience-card h2 {
+.portofolio-card h2 {
     margin: 0.5rem 0;
     font-size: 1.25rem;
 }
 
-.experience-description,
+.portofolio-description,
 .empty-state {
     color: var(--text-muted);
 }
