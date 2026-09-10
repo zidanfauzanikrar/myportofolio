@@ -9,7 +9,7 @@
     --paper: #faf6f0;
     --accent: #d95d39;
     --accent-dark: #a8442a;
-    --accent-light: #ffd7b2;
+    --accent-light: #ffe2c8;
     --line: #e3d9c9;
     --text-muted: #6b6459;
     --text-less-muted: #4b4439;
@@ -219,7 +219,7 @@ h1,
 
 .section-title {
     font-family: "Space Grotesk", -apple-system, sans-serif; /* Font section */
-    font-size: 2rem; /* Membesarkan ukuran huruf */
+    font-size: 2rem; /* Ukuran huruf */
     margin-bottom: 1.8rem; /* Jarak section ke kotak */
     position: relative; /* Patokan untuk garis bawah */
     display: inline-block; /* Kotak judul */
@@ -235,25 +235,6 @@ h1,
     height: 4px; /* Ketebalan garis */
     background-color: var(--accent); /* Warna garis */
     border-radius: 2px; /* Agar ujung garis tumpul */
-}
-
-.experience_card {
-    background-color: var(--accent-light); /* Warna latar kotak */
-    padding: 1.5rem; /* Jarak ke dalam */
-    border-radius: var(--radius); /* Agar sudut kotak melengkung */
-    border: 2px solid var(--line); /* Garis pinggir tipis pada kotak */
-    margin-bottom: 1rem; /* Jarak antarkotak */
-}
-
-.experience_card h3 {
-    color: var(--accent-dark); /* Warna teks judul tiap kotak */
-    margin-bottom: 0.5rem; /* Jarak antara judul dan deskripsi kotak */
-}
-
-.experience_card p {
-    color: var(--text-less-muted); /* Warna teks paragraf tiap kotak */
-    font-size: 0.95rem; /* Ukuran teks paragraf tiap kotak */
-    line-height: 1.7; /* Jarak antarbaris teks paragraf tiap kotak */
 }
 
 .portofolio-section {
@@ -281,10 +262,10 @@ h1,
 }
 
 .portofolio-card {
-    padding: 1.25rem;
-    background-color: #fff;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    background-color: var(--accent-light); /* Warna latar kotak */
+    padding: 1.4rem; /* Jarak ke dalam */
+    border-radius: var(--radius); /* Agar sudut kotak melengkung */
+    border: 2px solid var(--line); /* Garis pinggir tipis pada kotak */
 }
 
 .portofolio-category {
@@ -297,6 +278,13 @@ h1,
 .portofolio-card h2 {
     margin: 0.5rem 0;
     font-size: 1.25rem;
+    color: var(--accent-dark); /* Warna teks judul tiap kotak */
+}
+
+.portofolio-card p {
+    color: var(--text-less-muted); /* Warna teks paragraf tiap kotak */
+    font-size: 0.95rem; /* Ukuran teks paragraf tiap kotak */
+    line-height: 1.7; /* Jarak antarbaris teks paragraf tiap kotak */
 }
 
 .portofolio-description,
