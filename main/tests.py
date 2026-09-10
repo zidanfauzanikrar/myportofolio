@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from main.models import Experience
+from main.models import Experience, Skill
 
 
 class MainTest(TestCase):
@@ -12,8 +12,13 @@ class MainTest(TestCase):
             description="Help students understand web development.",
             category="part-time",
         )
+        self.skill = Skill.objects.create(
+            title="Communication",
+            description="Gives and receives information clearly, listens actively, and adapt messages to different audiences",
+            category="soft_skill",
+        )
 
-    def test_main_url_is_accessible(self):
+    def test_main_url_is_accessible_experience(self):
         response = self.client.get(reverse("main:show_main"))
 
         self.assertEqual(response.status_code, 200)
@@ -56,3 +61,31 @@ class MainTest(TestCase):
         self.assertFalse(self.experience.is_ongoing)
         self.assertContains(response, "Completed")
         self.assertNotContains(response, "Ongoing")
+
+    def test_main_url_is_accessible_skill(self):
+            response = self.client.get(reverse("main:show_main"))
+    
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, "index.html")
+            self.assertNotContains(response, self.skill.title)
+            self.assertContains(response, f'href="{reverse("main:show_skill")}"')
+
+    def test_skill_model(self):
+        self.assertEqual(str(self.skill), "Communication")
+        self.assertEqual(self.skill.category, "soft_skill")
+
+    def test_skill_page(self):
+        response = self.client.get(reverse("main:show_skill"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "skill.html")
+        self.assertContains(response, self.skill.title)
+        self.assertContains(response, self.skill.description)
+        self.assertContains(response, "Soft-skill")
+        self.assertContains(response, f'href="{reverse("main:show_main")}"')
+
+    def test_empty_skill_page(self):
+        Skill.objects.all().delete()
+        response = self.client.get(reverse("main:show_skill"))
+
+        self.assertContains(response, "No skills has been added yet.")
