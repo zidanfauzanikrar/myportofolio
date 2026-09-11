@@ -300,13 +300,6 @@ h1,
     transform: translateY(-4px);
 }
 
-.portofolio-category {
-    color: var(--accent-dark);
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
 .portofolio-card h2 {
     margin: 0.5rem 0;
     font-size: 1.25rem;
@@ -322,6 +315,13 @@ h1,
 .portofolio-description,
 .empty-state {
     color: var(--text-muted);
+}
+
+.portofolio-category {
+    color: var(--accent-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
 .experience-status {
