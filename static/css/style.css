@@ -67,15 +67,41 @@ h1,
 }
 
 .site-header nav a {
+    position: relative;
     color: var(--ink);
     text-decoration: none;
     font-size: 0.95rem;
     font-weight: 500; /* Ketebalan teks menu */
+    padding-bottom: 0.25rem;
     transition: color 0.3s ease; /* Efek transisi perubahan warna */
+}
+
+.site-header nav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--accent);
+    transition: width 0.25s ease;
 }
 
 .site-header nav a:hover {
     color: var(--accent); /* Mengubah warna saat di-hover mouse */
+}
+
+.site-header nav a:hover::after {
+    width: 100%;
+}
+
+.site-header nav a.active {
+    color: var(--accent-dark);
+}
+
+.site-header nav a.active::after {
+    width: 100%;
+    background-color: var(--accent-dark);
 }
 
 .hero {
@@ -266,6 +292,12 @@ h1,
     padding: 1.4rem; /* Jarak ke dalam */
     border-radius: var(--radius); /* Agar sudut kotak melengkung */
     border: 2px solid var(--line); /* Garis pinggir tipis pada kotak */
+    transition: border-color 0.25s ease, transform 0.25s ease;
+}
+
+.portofolio-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
 }
 
 .portofolio-category {
@@ -296,4 +328,13 @@ h1,
     margin-top: 1rem;
     font-size: 0.85rem;
     font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .portofolio-card,
+    .site-header nav a::after,
+    .brand,
+    .social-link {
+        transition: none;
+    }
 }
