@@ -5,28 +5,30 @@ NPM : 2506589616
 CLass : PBP E
 
 
+### Week 1
+
 ### Instruksi setup:
 
 ## 1. Masuk ke folder proyek dan buka terminal
 Buka terminal (PowerShell atau Command Prompt) dan masuk ke direktori proyek:
-Untuk bash, jalankan ```cd myportofolio``` di terminal
+Untuk bash, jalankan `cd myportofolio` di terminal
 
 ## 2. Buat Python virtual environment
-Jalankan ```python -m venv env``` di terminal
+Jalankan `python -m venv env` di terminal
 
 ## 3. Aktifkan virtual environment
 Jika menggunakan PowerShell di Windows dan mengalami error Execution Policy, jalankan perintah izin beserta aktivasi berikut di terminal Powershell:
-```Set-ExecutionPolicy -Scope Process -ExecutionPolicy```
-```RemoteSigned .\env\Scripts\Activate.ps1```
+`Set-ExecutionPolicy -Scope Process -ExecutionPolicy`
+`RemoteSigned .\env\Scripts\Activate.ps1`
 
 ## 4. Install dependensi atau library
-Jalankan ```pip install -r requirements.txt``` di terminal
+Jalankan `pip install -r requirements.txt` di terminal
 
 ## 5. Migrasikan database
-Jalankan ```python manage.py migrate``` di terminal
+Jalankan `python manage.py migrate` di terminal
 
 ## 6. Jalankan server lokal atau buka di Pacil Web Services (PWS)
-Untuk server lokal, jalankan ```python manage.py runserver``` di terminal.
+Untuk server lokal, jalankan `python manage.py runserver` di terminal.
 Lalu akses situs webnya di browser melalui alamat http://127.0.0.1:8000/
 
 
@@ -82,9 +84,9 @@ Halaman web terbagi menjadi beberapa bagian utama:
 
 ## 4. Informasi Environment & Instalasi
 
-* Teknologi Backend (Framework) : Django 6.1
+* Teknologi Backend (Framework) : Django 5.0
 * Dependensi Python : Python 3.13.7
-* Perintah Menjalankan Local Server : ```python manage.py runserver```
+* Perintah Menjalankan Local Server : `python manage.py runserver`
 * Link Deployment PWS : zidan-fauzan-myportofolio.pws.cs.ui.ac.id
 * Dependensi lain:
     * asgiref==3.12.1
@@ -103,19 +105,56 @@ Halaman web terbagi menjadi beberapa bagian utama:
 
 ### Tugas 1
 
-1. Ya, saya menggunakan ```<section>``` untuk mengelompokkan elemen-elemen yang ada di Profile dan di Experience agar lebih mudah diatur saat mengubah tampilan web di style.css. Contohnya bagian ```<section id="experience" class="portofolio-section">``` di index.html digunakan pada style.css di bagian 
+1. Ya, saya menggunakan `<section>` untuk mengelompokkan elemen-elemen yang ada di Profile dan di Experience agar lebih mudah diatur saat mengubah tampilan web di style.css. Contohnya bagian `<section id="experience" class="portofolio-section">` di index.html digunakan pada style.css di bagian 
 
-```.portfolio-section {```
-```    padding: 5rem 0;```
-```    border-top: 1px solid var(--line);```
-```}```
+`.portfolio-section {`
+`    padding: 5rem 0;`
+`    border-top: 1px solid var(--line);`
+`}`
 
 untuk memberikan jarak atas dan bawah (padding) serta garis tipis untuk membatasi antar-section portofolio.
 
-2. Saat mengatur kode CSS, masalah tata letak yang saya alami adalah terkait mengatur jarak antarkotak dan membuat header website kelihatan dengan jelas. Masalah jarak antarkotak akhirnya diselesaikan dengan menambahkan ```margin-bottom: 1rem``` di section ```.experience-card```, dan masalah membuat header website kelihatan jelas diselesaikan dengan menambahkan ```position: sticky``` dan menambahkan shadow pada header tersebut dengan ```box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15)``` pada ```.site-header``` agar memiliki garis bayangan tipis sehingga keberadaan header terlihat jelas bahkan saat di-scroll ke bawah. Untuk evaluasi saat berpindah dari tampilan desktop ke mobile, tampilan webnya tetap terlihat jelas dan rapi dikarenakan adanya bagian ```@media (max-width: 600px)```.
+2. Saat mengatur kode CSS, masalah tata letak yang saya alami adalah terkait mengatur jarak antarkotak dan membuat header website kelihatan dengan jelas. Masalah jarak antarkotak akhirnya diselesaikan dengan menambahkan `margin-bottom: 1rem` di section `.experience-card`, dan masalah membuat header website kelihatan jelas diselesaikan dengan menambahkan `position: sticky` dan menambahkan shadow pada header tersebut dengan `box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15)` pada `.site-header` agar memiliki garis bayangan tipis sehingga keberadaan header terlihat jelas bahkan saat di-scroll ke bawah. Untuk evaluasi saat berpindah dari tampilan desktop ke mobile, tampilan webnya tetap terlihat jelas dan rapi dikarenakan adanya bagian `@media (max-width: 600px)`.
 
 3. Batasan yang saya rasakan adalah terkait jika ingin menambahkan section yg baru, maka datanya harus di-hardcode di dalam file index.html dan tidak dapat diubah langsung di web. Fungsionalitas dinamis yang ingin saya persiapkan dan tambahkan adalah untuk dapat menambahkan dan mengubah isi informasi portofolio saya terkait pengalaman, proyek, dll bagi pihak tertentu, khususnya saya, pada webnya langsung.
 
 
 AI Disclosure: 
-Menggunakan Gemini Pro 3.1 untuk belajar terkait cara kerja HTML dan CSS serta memberikan panduan terkait bagaimana elemen-elemennya saling berinteraksi dalam kedua file index.html dan style.css dengan contoh kode. Selain itu, AI tersebut juga digunakan untuk memberikan saya ide untuk mendekorasi webnya seperti ```box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15)``` pada ```.site-header``` dan garis bawah pada ```.section-title::after```.
+Menggunakan Gemini Pro 3.1 untuk belajar terkait cara kerja HTML dan CSS serta memberikan panduan terkait bagaimana elemen-elemennya saling berinteraksi dalam kedua file index.html dan style.css dengan contoh kode. Selain itu, AI tersebut juga digunakan untuk memberikan saya ide untuk mendekorasi webnya seperti `box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15)` pada `.site-header` dan garis bawah pada `.section-title::after`.
+
+
+### Week 2
+
+### Dokumentasi Pembaruan
+
+## 1. Perubahan Struktur Halaman
+
+Portofolio yang sebelumnya satu halaman dengan anchor link (`#profile`, `#experience`) sekarang dipecah menjadi tiga halaman terpisah:
+* `index.html` (`main:show_main`) : Bagian Profile/Hero.
+* `experience.html` (`main:show_experience`) : Daftar pengalaman, dirender dari `experience_list` lewat `{% for %}`, menampilkan kategori (`get_category_display`), judul, deskripsi, serta status "Ongoing"/"Completed" berdasarkan field `is_ongoing`. Ada fallback teks lewat `{% empty %}` jika belum ada data.
+* `skill.html` (`main:show_skill`) : Daftar skill dengan struktur serupa (`skill_list`, kategori, judul, deskripsi).
+
+Navigasi di `.site-header` sekarang mengarah ke masing-masing halaman lewat `{% url %}`, bukan lagi anchor `#profile`/`#experience` seperti di Week 1.
+
+## 2. Penambahan Interaktivitas
+
+* Nav link mendapat garis bawah yang muncul dengan animasi slide-in saat hover (`::after` dengan transisi `width`), dan halaman yang sedang aktif otomatis mendapat garis bawah permanen lewat class `.active`.
+* Class `.active` ditambahkan otomatis lewat script baru `static/js/main.js`, yang membandingkan `pathname` tiap link nav dengan `window.location.pathname`.
+* Kartu (`.portofolio-card`, dipakai bersama di halaman Experience & Skill) mendapat efek hover: border berubah ke warna aksen dan kartu terangkat sedikit (`transform: translateY`).
+* Transisi di atas dinonaktifkan otomatis untuk user dengan preferensi `prefers-reduced-motion: reduce`.
+
+## 3. Perbaikan Bug
+
+* Link Email di bagian Social Links sebelumnya tidak memakai `mailto:` sehingga tidak membuka aplikasi email saat diklik. Sudah diperbaiki menjadi `mailto:zidan.fauzan@ui.ac.id`.
+
+### Tugas 2
+
+1. Browser mengirim request HTTP ke URL (misalnya ke /experience/), request tersebut ditangkap oleh urls.py yang di folder proyek (yaitu portofolio), lalu `include("main.urls)` mengarahkannya ke urls.py yang di dalam main dan pathnya dicocokkan ke view tertentu (misalnya ke `show_experience(request)`), lalu view tersebut memanggil model yang sesuai (misalnya Experience.objects.all()) untuk mengambil data dari database melalui Object-Relational Mapping (ORM), lalu data itu dimasukkan ke dalam dictionary context pada method tersebut dan di-render bersama template experience.html di mana `{{ }}` dan `{{ % for % }}` diubah dengan data aslinya, lalu hasil HTML tersebut dikirim kembali sebagai respons dan browser me-render halamannya menggunakan style.css.
+
+2. Agar data portofolionya dapat lebih mudah diubah dan dikelola, agar ada pemisahan tanggung jawab antara kode-kode dalam templates yang mengelola tampilan dan input data pada web, agar tidak harus mengubah dan men-deploy ulang kode tiap mengubah data portofolio, serta agar struktur dan validasi data lebih rapi dan terjamin.
+
+3. `makemigrations` membuat file migrasi sebagai blueprint skema dari perubahan di models.py, sedangkan `migrate` menerapkan file migrasi tersebut ke database asli. Contoh alurnya yaitu menambah field `is_ongoing = models.BooleanField(default=False)` ke model Experience, lalu `makemigrations` men-generate file migrasi untuk kolom baru tersebut, lalu `migrate` menambahkan kolomnya ke tabel di database.
+
+
+AI Disclosure:
+Menggunakan Claude Sonnet 5.0 High untuk melakukan debugging, contohnya pada link email yang awalnya tidak menggunakan `mailto` agar menyambung ke link dengan semestinya (sekarang menjadi menjadi `mailto:zidan.fauzan@ui.ac.id`). Selain itu, AI tersebut juga digunakan untuk memberikan saya ide-ide terkait penambahan kreativitas tambahan pada tampilan web dan memberikan contoh kodenya untuk saya telusuri dan ubah sesuai kemauan saya. AI tersebut juga saya gunakan untuk mempelajari alur pengiriman dan penerimaan request serta pemindahan data pada proyek ini.
