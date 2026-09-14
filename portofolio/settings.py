@@ -16,6 +16,8 @@ load_dotenv()
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "zidan-fauzan-myportofolio.pws.cs.ui.ac.id"]
 
+CSRF_TRUSTED_ORIGINS = ["https://zidan-fauzan-myportofolio.pws.cs.ui.ac.id/"]
+
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 
 from pathlib import Path
