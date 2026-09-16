@@ -44,12 +44,16 @@ class ExperienceForm(ModelForm):
             "title",
             "description",
             "category",
+            "thumbnail",
+            "ended_at",
         ]
 
         labels = {
-            "title": "Nama Skill",
-            "description": "Deskripsi Skill",
-            "category": "Kategori Skill",
+            "title": "Nama Experience",
+            "description": "Deskripsi Experience",
+            "category": "Kategori Experience",
+            "thumbnail": "Thumbnail",
+            "ended_at": "Tanggal Selesai",
         }
 
         widgets = {
@@ -70,19 +74,15 @@ class ExperienceForm(ModelForm):
                     "placeholder": "Internship, Research, Volunteer, Part-time, Full-time, Freelance",
                 }
             ),
-            "experience_image_url": URLInput(
+            "thumbnail": URLInput(
                 attrs={
                     "placeholder": "https://drive.google.com/thumbnail?id=...&sz=w1000",
                 }
             ),
-            "started_at": TextInput(
-                attrs={
-                    "placeholder": "YYYY-MM-DD"
-                }
-            ),
             "ended_at": TextInput(
                 attrs={
-                    "placeholder": "YYYY-MM-DD"
+                    "type": "date",
+                    "placeholder": "Kosongkan jika masih berlangsung",
                 }
             ),
         }

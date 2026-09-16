@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block title %}Experience - {{ name }}{% endblock title %}
 
@@ -7,11 +7,35 @@
     <section class="portofolio-section" id="experience">
         <div class="container">
             <p class="section-kicker">My journey so far</p>
-            <h1 class="section-title">Experience</h1>
+            <div class="experience-header">
+                <h1 class="section-title">Experience</h1>
+                <a href="{% url 'main:create_experience' %}"
+                   class="button experience-add-button">
+                    <span aria-hidden="true">+</span>
+                    Tambah Experience
+                </a>
+            </div>
 
-            <div class="portofolio-grid">
+            <form method="get"
+                  action="{% url 'main:show_experience' %}"
+                  class="experience-search">
+                <input type="search"
+                       name="title"
+                       value="{{ title_query }}"
+                       placeholder="Cari berdasarkan nama experience"
+                       class="experience-search__input"
+                       aria-label="Cari berdasarkan nama experience">
+                <button type="submit" class="button">Cari</button>
+            </form>
+
+            <div class="portofolio-grid experience-grid">
                 {% for experience in experience_list %}
                     <article class="portofolio-card">
+                        {% if experience.thumbnail %}
+                            <img src="{{ experience.thumbnail }}"
+                                 alt="Thumbnail {{ experience.title }}"
+                                 class="experience-thumbnail">
+                        {% endif %}
                         <span class="portofolio-category">
                             {{ experience.get_category_display }}
                         </span>
@@ -19,16 +43,24 @@
                         <p class="portofolio-description">
                             {{ experience.description }}
                         </p>
+
                         {% if experience.is_ongoing %}
                             <p class="experience-status">Ongoing</p>
                         {% else %}
                             <p class="experience-status">Completed</p>
                         {% endif %}
+
+                        <div class="experience-card-actions">
+                            <a href="{% url 'main:update_experience' experience.id %}" class="button">Edit</a>
+                            {% include "components/experience_delete_modal.html" with experience=experience %}
+                        </div>
                     </article>
                 {% empty %}
-                    <p class="empty-state">
-                        No experience has been added yet.
-                    </p>
+                    {% if title_query %}
+                        <p class="empty-state">Tidak ada experience dengan nama tersebut.</p>
+                    {% else %}
+                        <p class="empty-state">Belum ada experience yang ditambahkan.</p>
+                    {% endif %}
                 {% endfor %}
             </div>
         </div>
