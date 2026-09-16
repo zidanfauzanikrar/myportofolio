@@ -25,6 +25,14 @@
                        placeholder="Cari berdasarkan nama experience"
                        class="experience-search__input"
                        aria-label="Cari berdasarkan nama experience">
+                <select name="category"
+                        class="experience-search__select"
+                        aria-label="Filter berdasarkan kategori">
+                    <option value="">Semua Kategori</option>
+                    {% for value, label in category_choices %}
+                        <option value="{{ value }}" {% if value == category_query %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
                 <button type="submit" class="button">Cari</button>
             </form>
 

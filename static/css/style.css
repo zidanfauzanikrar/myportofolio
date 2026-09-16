@@ -456,6 +456,24 @@ h1,
     border-color: var(--accent);
 }
 
+.skill-search__select,
+.experience-search__select {
+    width: 100%;
+    min-width: 0;
+    padding: 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+}
+
+.skill-search__select:focus,
+.experience-search__select:focus {
+    outline: 2px solid var(--accent);
+    border-color: var(--accent);
+}
+
 .skill-card-actions {
     display: flex;
     flex-direction: column;
@@ -576,6 +594,11 @@ h1,
     .skill-delete-modal__actions .button {
         width: 100%;
         text-align: center;
+    }
+
+    .skill-search__select,
+    .experience-search__select {
+        width: 100%;
     }
 }
 

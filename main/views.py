@@ -28,12 +28,13 @@ def show_experience(request):
         json_response.content.decode("utf-8"),
     )
     experiences = [experience.object for experience in experiences]
-    title_query = request.GET.get("title", "").strip()
 
     context = {
         "name": "Zidan Fauzan Ikrar",
         "experience_list": experiences,
-        "title_query": title_query,
+        "title_query": request.GET.get("title", "").strip(),
+        "category_query": request.GET.get("category", "").strip(),
+        "category_choices": Experience.EXPERIENCE_CHOICES,
     }
     return render(request, "experience.html", context)
 
@@ -53,10 +54,14 @@ def create_experience(request):
 
 def get_experience_json(request):
     title_query = request.GET.get("title", "").strip()
+    category_query = request.GET.get("category", "").strip()
     experiences = Experience.objects.all()
 
     if title_query:
         experiences = experiences.filter(title__icontains=title_query)
+
+    if category_query:
+        experiences = experiences.filter(category=category_query)
 
     experiences_json = serializers.serialize("json", experiences)
     return HttpResponse(experiences_json, content_type="application/json")
@@ -95,12 +100,13 @@ def show_skill(request):
         json_response.content.decode("utf-8"),
     )
     skills = [skill.object for skill in skills]
-    title_query = request.GET.get("title", "").strip()
 
     context = {
         "name": "Zidan Fauzan Ikrar",
         "skill_list": skills,
-        "title_query": title_query,
+        "title_query": request.GET.get("title", "").strip(),
+        "category_query": request.GET.get("category", "").strip(),
+        "category_choices": Skill.SKILL_CHOICES,
     }
     return render(request, "skill.html", context)
 
@@ -120,10 +126,14 @@ def create_skill(request):
 
 def get_skill_json(request):
     title_query = request.GET.get("title", "").strip()
+    category_query = request.GET.get("category", "").strip()
     skills = Skill.objects.all()
 
     if title_query:
         skills = skills.filter(title__icontains=title_query)
+
+    if category_query:
+        skills = skills.filter(category=category_query)
 
     skills_json = serializers.serialize("json", skills)
     return HttpResponse(skills_json, content_type="application/json")
