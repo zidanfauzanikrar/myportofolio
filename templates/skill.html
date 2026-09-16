@@ -37,7 +37,7 @@
                                 {{ skill.description }}
                             </p>
                             <div class="skill-card-actions">
-                                <a href="{% url 'main:update_skill' skill.id %}" class="button">Edit</a>
+                                <a href="{% url 'main:update_skill' skill.id %}" class="button button-edit">Edit</a>
                                 {% include "components/skill_delete_modal.html" with skill=skill %}
                             </div>
                         </article>

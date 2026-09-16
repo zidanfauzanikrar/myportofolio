@@ -51,7 +51,7 @@
                         {% endif %}
 
                         <div class="experience-card-actions">
-                            <a href="{% url 'main:update_experience' experience.id %}" class="button">Edit</a>
+                            <a href="{% url 'main:update_experience' experience.id %}" class="button button-edit">Edit</a>
                             {% include "components/experience_delete_modal.html" with experience=experience %}
                         </div>
                     </article>

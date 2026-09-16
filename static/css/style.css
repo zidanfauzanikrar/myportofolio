@@ -620,6 +620,11 @@ h1,
     line-height: 1;
 }
 
+.button-edit {
+    width: 14%;
+    margin-top: 0.5rem;
+}
+
 .skill-search,
 .experience-search {
     display: flex;
