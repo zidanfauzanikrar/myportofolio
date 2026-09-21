@@ -158,3 +158,51 @@ Navigasi di `.site-header` sekarang mengarah ke masing-masing halaman lewat `{% 
 
 AI Disclosure:
 Menggunakan Claude Sonnet 5.0 High untuk melakukan debugging, contohnya pada link email yang awalnya tidak menggunakan `mailto` agar menyambung ke link dengan semestinya (sekarang menjadi menjadi `mailto:zidan.fauzan@ui.ac.id`). Selain itu, AI tersebut juga digunakan untuk memberikan saya ide-ide terkait penambahan kreativitas tambahan pada tampilan web dan memberikan contoh kodenya untuk saya telusuri dan ubah sesuai kemauan saya. AI tersebut juga saya gunakan untuk mempelajari alur pengiriman dan penerimaan request serta pemindahan data pada proyek ini.
+
+
+
+### Week 3
+
+### Dokumentasi Pembaruan
+
+## 1. Template Inheritance (base.html)
+
+Header (navbar) dan footer yang sebelumnya ditulis ulang di tiap halaman sekarang dipusatkan ke satu file `base.html`, memakai `{% block title %}`, `{% block meta %}`, dan `{% block content %}`. Halaman `index.html`, `experience.html`, dan `skill.html` sekarang cukup `{% extends "base.html" %}` dan mengisi block masing-masing, tanpa perlu menulis ulang `<head>`, `<header>`, atau `<footer>`.
+
+## 2. CRUD Penuh untuk Experience & Skill
+
+Sebelumnya cuma ada Create dan Delete untuk Skill. Sekarang kedua entity punya siklus CRUD lengkap:
+* `update_experience` dan `update_skill` ditambahkan di `views.py`, memakai form yang sama dengan create (`ExperienceForm`/`SkillForm`) lewat parameter `instance`, dibedakan lewat context `is_edit`.
+* Rute `experience/add/`, `experience/<uuid:experience_id>/update/`, dan `experience/<uuid:experience_id>/delete/` didaftarkan di `urls.py` (sebelumnya belum ada sama sekali, jadi fitur create/delete Experience yang sudah ada di `views.py` sebenarnya belum bisa diakses).
+* `ExperienceForm` diperluas dengan field `thumbnail` dan `ended_at`, sehingga status ongoing/completed sebuah pengalaman sekarang bisa diatur langsung dari form, bukan cuma otomatis dari `auto_now_add`.
+* Template `experience_form.html` dan `skill_form.html` dipakai bersama untuk mode tambah maupun edit.
+
+## 3. Pencarian dan Filter Kategori
+
+Form pencarian pada halaman Experience dan Skill diperluas dengan dropdown filter kategori, mengambil pilihannya langsung dari `EXPERIENCE_CHOICES`/`SKILL_CHOICES` di model (jadi otomatis sinkron kalau kategori baru ditambahkan). Filter judul dan kategori bisa dipakai bersamaan lewat `get_experience_json`/`get_skill_json`.
+
+## 4. Konfirmasi Hapus via Popover API
+
+Tombol Hapus pada tiap kartu Experience dan Skill sekarang memunculkan modal konfirmasi (`experience_delete_modal.html`, `skill_delete_modal.html`) memakai native HTML Popover API (atribut `popover`, `popovertarget`), tanpa JavaScript tambahan untuk buka/tutup modalnya.
+
+## 5. Perbaikan Bug
+
+* Label pada `ExperienceForm` sebelumnya salah salin dari `SkillForm` ("Nama Skill", "Deskripsi Skill", dst), sekarang disesuaikan jadi label Experience.
+* Rute create/update/delete untuk Experience belum pernah terdaftar di `urls.py` meski fungsinya sudah ada di `views.py`.
+* Template `skill_delete_modal.html` sempat belum ada padahal sudah direferensikan lewat `{% include %}`, sehingga halaman Skill akan gagal render sebelum file ini dibuat.
+* Class `.button-danger` belum ada di `style.css` padahal dipakai di kedua modal hapus, sehingga tombol hapus belum berwarna merah seperti seharusnya.
+* `CSRF_TRUSTED_ORIGINS` di `settings.py` memakai trailing slash yang menyebabkan error "Origin checking failed" saat deploy ke PWS, karena header Origin dari browser tidak menyertakan slash.
+
+### Tugas 3
+
+1. ModelForm Django digunakan agar menyambung langsung ke model, terdapat validasi otomatis, data form dibersihkan dari input berbahaya, penyimpanan form langsung menyimpan ke database, dan terdapat error handling otomatis. `{% csrf_token %}` wajib ada karena Cross-Site Request Forgery (CSRF) merupakan serangan di mana situs lain membuat request secara tersembunyi menggunakan session user yang sedang login, dan `{% csrf_token %}` menyisipkan token rahasia unik pada form, sehingga setiap kali request POST masuk, Django mencocokannya dengan token yang disimpan pada session user.
+
+2. Karena format JSON lebih ringkas daripada XML, native di JavaScript sehingga lebih mudah untuk frontend, lebih readable, lebih mudah di-debug karena menggunakan tipe data umum, dan parsing lebih mudah dan cepat untuk sebagian besar bahasa.
+
+3. Alur penggunaan view untuk JSON dimulai dengan request yang masuk ke suatu endpoint (misal /api/skills/), ditangkap oleh urls.py, lalu diarahkan ke view get_skill_json. View mengambil data database melalui Object-Relational Mapping menjadi Queryset yang tidak dapat langsung dikirim sebagai HTTP response, sehingga `serializers.serialize("json", skills)` mengubahnya menjadi string JSON. Lalu string JSON tersebut dibungkus menjadi HttpResponse dan dikirim ke client atau view lain seperti `show_skill` dan diserialize lagi untuk digunakan di template.
+Serialization di sini dibutuhkan karena HTTP hanya dapat mengirim teks/bytes, sedangkan model Django itu objek kompleks yang memiliki method, relasi ke model lain, dll sehingga tidak memiliki representasi teks bawaan yang sederhana. Namun, serialisasi JSON dapat mengubah model Django tersebut agar dapat dibaca oleh bahasa atau platform manapun karena JSON merupakan format standar.
+
+AI Disclosure: 
+Menggunakan Claude Sonnet 5 Effort High untuk membantu menambahkan fungsionalitas update form untuk experience dan skills, untuk debugging dan memastikan konsistensi format antara file-file skills dan experience, untuk membantu menambahkan fungsionalitas tambahan berupa filter pencarian berdasarkan kategori skill atau experience, dan untuk memberikan pemahaman terkait alur perpindahan data dan request pada Django.
+
+Link Log Chat AI: https://claude.ai/share/792c6c31-e28b-4315-96da-7855fab3f149
