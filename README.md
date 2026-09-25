@@ -206,3 +206,51 @@ AI Disclosure:
 Menggunakan Claude Sonnet 5 Effort High untuk membantu menambahkan fungsionalitas update form untuk experience dan skills, untuk debugging dan memastikan konsistensi format antara file-file skills dan experience, untuk membantu menambahkan fungsionalitas tambahan berupa filter pencarian berdasarkan kategori skill atau experience, dan untuk memberikan pemahaman terkait alur perpindahan data dan request pada Django.
 
 Link Log Chat AI: https://claude.ai/share/792c6c31-e28b-4315-96da-7855fab3f149
+
+
+
+### Week 4
+
+### Dokumentasi Pembaruan
+
+## 1. Autentikasi dan Sesi
+
+Ditambahkan sistem login penuh, menggunakan komponen bawaan Django:
+* `register` memakai `UserCreationForm` untuk membuat akun baru.
+* `login_user` memakai `AuthenticationForm`, memanggil `login()` saat kredensial valid, sekaligus menyimpan waktu login ke cookie `last_login`.
+* `logout_user` memanggil `logout()` dan menghapus cookie `last_login`.
+
+Kombinasi session bawaan Django dan cookie ini membedakan tiga level akses, pengguna yang belum login, user biasa yang sudah login, dan superuser, yang menentukan tombol dan aksi apa saja yang muncul di tiap halaman.
+
+## 2. Fitur Star/Unstar
+
+Model `Skill` dan `Experience` mendapat field `starred_by`, relasi `ManyToManyField` ke `User`. Fungsi `toggle_skill_star` dan `toggle_experience_star` (dibatasi `@login_required`) menambah atau menghapus user dari relasi itu tergantung status star saat ini, tersedia untuk semua pengguna yang sudah login, tidak dibatasi role tertentu.
+
+## 3. Role Editor lewat Group dan Permission Django
+
+Ditambahkan role baru bernama Editor, dibangun di atas sistem Group dan Permission bawaan Django, bukan field role kustom:
+* Data migration membuat Group `Editor`, diberi permission `main.change_skill` dan `main.change_experience` yang otomatis tersedia dari tiap model.
+* `update_skill` dan `update_experience` diganti pengecekannya, dari `is_superuser` menjadi `has_perm("main.change_skill")`/`has_perm("main.change_experience")`, sehingga Editor bisa mengedit tanpa perlu jadi superuser.
+* `create_skill`, `delete_skill`, `create_experience`, `delete_experience` tetap dikunci khusus superuser.
+* Template `skill.html` dan `experience.html` menampilkan tombol Edit berdasarkan `perms.main.change_skill`/`perms.main.change_experience`, terpisah dari tombol Hapus yang tetap dicek lewat `user.is_superuser`, supaya tampilan tombol selalu sinkron dengan apa yang sebenarnya diizinkan di sisi view.
+
+## 4. Halaman 403 Kustom
+
+Error `PermissionDenied` sekarang menampilkan halaman `403.html` yang mewarisi `base.html`, konsisten dengan desain situs. `handler403` diarahkan ke view custom di `views.py` supaya variabel `name` tetap tersedia di navbar dan footer halaman error tersebut.
+
+## 5. Dark Mode Toggle
+
+* Variabel warna di `style.css` direstruktur, sebagian besar sudah memakai CSS custom property sejak awal, ditambah override lewat selector `:root[data-theme="dark"]`.
+* Preferensi tema disimpan ke `localStorage`, dibaca lewat script inline di `<head>` sebelum halaman sempat dirender, mencegah kedipan warna saat halaman baru dibuka.
+* Tombol toggle ditambahkan di navbar, ikonnya (☀️/🌙) diperbarui otomatis lewat `main.js` mengikuti tema yang aktif.
+
+## 6. Perbaikan Bug
+
+* Pesan dari `messages` framework (misalnya "Skill berhasil diperbarui!") sempat nyangkut dan muncul di halaman yang tidak relevan, seperti halaman Login, karena hanya `login.html` yang merender blok `{% for message in messages %}`. Blok render pesan dipindah ke `base.html` supaya berlaku otomatis di semua halaman tujuan redirect.
+* `403.html` sempat gagal dirender karena ada tag `{% endblock %}` berlebih di baris terakhir.
+* Tombol star/unstar nyaris tidak terlihat saat dark mode aktif, karena `.button-star` memakai `background: var(--ink)`, variabel yang nilainya berbalik terang di tema gelap, sementara teksnya tetap putih. Diganti ke `var(--neutral)`, warna abu gelap yang nilainya tidak berubah mengikuti tema, mengikuti pola yang sama dengan `.button-secondary`.
+
+AI Disclosure: 
+Menggunakan Claude Sonnet 5 Extra Effort untuk membantu menambahkan model `create_editor_group` dan mempelajari alur validasi mengenai masing-masing role (user sudah login, guest, superuser, dan terutama role yang harus dibuat sendiri seperti editor). Selain itu, AI tersebut juga digunakan untuk membantu menerapkan dark mode toggle sebagai fungsionalitas tambahan week ini beserta halaman 403 yang customized. AI tersebut juga digunakan untuk perbaikan bug seperti messages yang muncul secara tak terduga pada halaman login dan memperbaiki warna pada kode css agar semuanya menggunakan variabel agar mudah diubah ke dark mode.
+
+Link Log Chat AI: https://claude.ai/share/792c6c31-e28b-4315-96da-7855fab3f149
