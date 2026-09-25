@@ -119,7 +119,11 @@ def get_experience_json(request):
     if category_query:
         experiences = experiences.filter(category=category_query)
 
-    experiences_json = serializers.serialize("json", experiences, use_natural_foreign_keys=True)
+    experiences_json = serializers.serialize(
+        "json",
+        experiences,
+        fields=["title", "description", "category", "thumbnail", "started_at", "ended_at"],
+    )
     return HttpResponse(experiences_json, content_type="application/json")
 
 @login_required(login_url="/login/")
@@ -214,7 +218,11 @@ def get_skill_json(request):
     if category_query:
         skills = skills.filter(category=category_query)
 
-    skills_json = serializers.serialize("json", skills, use_natural_foreign_keys=True)
+    skills_json = serializers.serialize(
+        "json",
+        skills,
+        fields=["title", "description", "category"],
+    )
     return HttpResponse(skills_json, content_type="application/json")
 
 @login_required(login_url="/login/")
