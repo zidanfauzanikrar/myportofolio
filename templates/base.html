@@ -3,6 +3,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+    <script>
+        (function () {
+            var stored = localStorage.getItem('theme');
+            var theme = stored || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +41,7 @@
                 <a href="{% url 'main:login' %}">Login</a>
                 <a href="{% url 'main:register' %}">Register</a>
             {% endif %}
+            <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Ganti tema"></button>
         </nav>
     </div>
   </header>
