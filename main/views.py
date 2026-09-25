@@ -137,7 +137,7 @@ def delete_experience(request, experience_id):
 
 @login_required(login_url="/login/")
 def update_experience(request, experience_id):
-    if not request.user.is_superuser:
+    if not request.user.has_perm("main.change_experience"):
         raise PermissionDenied
     experience = get_object_or_404(Experience, pk=experience_id)
     form = ExperienceForm(request.POST or None, instance=experience)
@@ -232,7 +232,7 @@ def delete_skill(request, skill_id):
 
 @login_required(login_url="/login/")
 def update_skill(request, skill_id):
-    if not request.user.is_superuser:
+    if not request.user.has_perm("main.change_skill"):
         raise PermissionDenied
     skill = get_object_or_404(Skill, pk=skill_id)
     form = SkillForm(request.POST or None, instance=skill)
@@ -260,3 +260,8 @@ def toggle_skill_star(request, skill_id):
             skill.starred_by.add(request.user)
 
     return redirect("main:show_skill")
+
+# Custom Permission Denied
+
+def custom_permission_denied(request, exception=None):
+    return render(request, "403.html", {"name": name}, status=403)
