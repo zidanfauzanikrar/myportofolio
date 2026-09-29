@@ -17,6 +17,8 @@ from main.views import (
     logout_user,
     toggle_experience_star,
     toggle_skill_star,
+    create_experience_ajax,
+    create_skill_ajax,
 )
 
 app_name = "main"
@@ -37,6 +39,7 @@ urlpatterns = [
         toggle_experience_star,
         name="toggle_experience_star",
     ),
+    path("experience/add-ajax/", create_experience_ajax, name="create_experience_ajax"),
 
     path("skills/", show_skill, name="show_skill"),
     path("skills/add/", create_skill, name="create_skill"),
@@ -48,4 +51,5 @@ urlpatterns = [
         toggle_skill_star,
         name="toggle_skill_star",
     ),
+    path("skill/add-ajax/", create_skill_ajax, name="create_skill_ajax"),
 ]
