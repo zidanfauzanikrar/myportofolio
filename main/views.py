@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.core import serializers
-from django.http import HttpResponse
+from django.db.models.aggregates import Count
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
@@ -74,20 +75,12 @@ def show_main(request):
 # Experience
 
 def show_experience(request):
-    json_response = get_experience_json(request)
-
-    experiences = serializers.deserialize(
-        "json",
-        json_response.content.decode("utf-8"),
-    )
-    experiences = [experience.object for experience in experiences]
-
     context = {
         "name": name,
-        "experience_list": experiences,
         "title_query": request.GET.get("title", "").strip(),
         "category_query": request.GET.get("category", "").strip(),
         "category_choices": Experience.EXPERIENCE_CHOICES,
+        "form": ExperienceForm(),
     }
     return render(request, "experience.html", context)
 
@@ -119,12 +112,31 @@ def get_experience_json(request):
     if category_query:
         experiences = experiences.filter(category=category_query)
 
-    experiences_json = serializers.serialize(
-        "json",
-        experiences,
-        fields=["title", "description", "category", "thumbnail", "started_at", "ended_at"],
-    )
-    return HttpResponse(experiences_json, content_type="application/json")
+    experiences = experiences.annotate(star_count=Count("starred_by"))
+
+    starred_ids = set()
+    if request.user.is_authenticated:
+        starred_ids = set(request.user.starred_experience.values_list("pk", flat=True))
+
+    data = []
+    for experience in experiences:
+        data.append({
+            "pk": str(experience.id),
+            "fields": {
+                "title": experience.title,
+                "description": experience.description,
+                "category": experience.category,
+                "category_display": experience.get_category_display(),
+                "thumbnail": experience.thumbnail,
+                "started_at": experience.started_at,
+                "ended_at": experience.ended_at,
+                "is_ongoing": experience.is_ongoing,
+                "star_count": experience.star_count,
+                "is_starred": experience.pk in starred_ids,
+            }
+        })
+
+    return JsonResponse(data, safe=False)
 
 @login_required(login_url="/login/")
 def delete_experience(request, experience_id):
@@ -173,20 +185,12 @@ def toggle_experience_star(request, experience_id):
 # Skill
 
 def show_skill(request):
-    json_response = get_skill_json(request)
-
-    skills = serializers.deserialize(
-        "json",
-        json_response.content.decode("utf-8"),
-    )
-    skills = [skill.object for skill in skills]
-
     context = {
         "name": name,
-        "skill_list": skills,
         "title_query": request.GET.get("title", "").strip(),
         "category_query": request.GET.get("category", "").strip(),
         "category_choices": Skill.SKILL_CHOICES,
+        "form": SkillForm(),
     }
     return render(request, "skill.html", context)
 
@@ -218,12 +222,27 @@ def get_skill_json(request):
     if category_query:
         skills = skills.filter(category=category_query)
 
-    skills_json = serializers.serialize(
-        "json",
-        skills,
-        fields=["title", "description", "category"],
-    )
-    return HttpResponse(skills_json, content_type="application/json")
+    skills = skills.annotate(star_count=Count("starred_by"))
+
+    starred_ids = set()
+    if request.user.is_authenticated:
+        starred_ids = set(request.user.starred_skill.values_list("pk", flat=True))
+
+    data = []
+    for skill in skills:
+        data.append({
+            "pk": str(skill.id),
+            "fields": {
+                "title": skill.title,
+                "description": skill.description,
+                "category": skill.category,
+                "category_display": skill.get_category_display(),
+                "star_count": skill.star_count,
+                "is_starred": skill.pk in starred_ids,
+            }
+        })
+
+    return JsonResponse(data, safe=False)
 
 @login_required(login_url="/login/")
 def delete_skill(request, skill_id):

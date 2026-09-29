@@ -3,68 +3,278 @@
 {% block title %}Skills - {{ name }}{% endblock title %}
 
 {% block content %}
-    <main>
-        <section class="portofolio-section" id="skill">
-            <div class="container">
-                <p class="section-kicker">What I'm capable of</p>
-                <div class="skill-header">
-                    <h1 class="section-title">Skills</h1>
-                    {% if user.is_superuser %}
-                        <a href="{% url 'main:create_skill' %}"
-                        class="button skill-add-button">
-                            <span aria-hidden="true">+</span>
-                            Tambah Skill
-                        </a>
-                    {% endif %}
-                </div>
-                <form method="get"
-                      action="{% url 'main:show_skill' %}"
-                      class="skill-search">
-                    <input type="search"
-                           name="title"
-                           value="{{ title_query }}"
-                           placeholder="Cari berdasarkan nama skill"
-                           class="skill-search__input"
-                           aria-label="Cari berdasarkan nama skill">
-                    <select name="category"
-                            class="skill-search__select"
-                            aria-label="Filter berdasarkan kategori">
-                        <option value="">Semua Kategori</option>
-                        {% for value, label in category_choices %}
-                            <option value="{{ value }}" {% if value == category_query %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="button">Cari</button>
-                </form>
-                <div class="portofolio-grid skill-grid">
-                    {% for skill in skill_list %}
-                        <article class="portofolio-card">
-                            <span class="portofolio-category">
-                                {{ skill.get_category_display }}
-                            </span>
-                            <h2>{{ skill.title }}</h2>
-                            <p class="portofolio-description">
-                                {{ skill.description }}
-                            </p>
-                            <div class="skill-card-actions">
-                                {% include "components/skill_star.html" with skill=skill %}
-                                {% if perms.main.change_skill %}
-                                    <a href="{% url 'main:update_skill' skill.id %}" class="button button-edit">Edit</a>
-                                {% endif %}
-                                {% if user.is_superuser %}
-                                    {% include "components/skill_delete_modal.html" with skill=skill %}
-                                {% endif %}
-                            </div>
-                        </article>
-                    {% empty %}
-                        {% if title_query %}
-                            <p class="empty-state">Tidak ada skill dengan nama tersebut.</p>
-                        {% else %}
-                            <p class="empty-state">Belum ada skill yang ditambahkan.</p>
-                        {% endif %}
-                    {% endfor %}
-                </div>
+<main>
+    <section class="portofolio-section" id="skill">
+        <div class="container">
+            <p class="section-kicker">What I'm capable of</p>
+            <div class="skill-header">
+                <h1 class="section-title">Skills</h1>
+                {% if user.is_superuser %}
+                    <button type="button"
+                            class="button skill-add-button"
+                            popovertarget="add-skill-modal">
+                        <span aria-hidden="true">+</span>
+                        Tambah Skill
+                    </button>
+                {% endif %}
             </div>
-        </section>
-    </main>
+                <form id="skill-search-form"
+                  class="skill-search"
+                  method="get"
+                  action="{% url 'main:show_skill' %}">
+                <input type="search"
+                       id="search-input"
+                       name="title"
+                       value="{{ title_query }}"
+                       placeholder="Cari berdasarkan nama skill"
+                       class="skill-search__input"
+                       aria-label="Cari berdasarkan nama skill">
+                <select id="category-select"
+                        name="category"
+                        class="skill-search__select"
+                        aria-label="Filter berdasarkan kategori">
+                    <option value="">Semua Kategori</option>
+                    {% for value, label in category_choices %}
+                        <option value="{{ value }}" {% if value == category_query %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="button">Cari</button>
+            </form>
+
+             <div id="loading" class="empty-state hide" role="status" aria-live="polite">
+                <p>Memuat skill...</p>
+            </div>
+
+             <div id="error" class="empty-state hide" role="alert">
+                <p>Gagal memuat data skill. Silakan coba lagi.</p>
+            </div>
+
+             <div id="empty" class="empty-state hide">
+                <p>Belum ada skill yang ditambahkan atau ditemukan.</p>
+            </div>
+
+             <div id="grid"
+                 class="portofolio-grid skill-grid hide"
+                 data-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}"
+                 data-can-edit="{% if perms.main.change_skill %}true{% else %}false{% endif %}"
+                 data-can-delete="{% if user.is_superuser %}true{% else %}false{% endif %}"
+                 data-csrf="{{ csrf_token }}"></div>
+        </div>
+    </section>
+</main>
+
+{% if user.is_superuser %}
+    {% include "components/skill_form_modal.html" %}
+{% endif %}
+
+<script>
+    // Konfigurasi
+    const SKILL_ENDPOINT = "{% url 'main:get_skill_json' %}";
+    const DUMMY_ID = "00000000-0000-0000-0000-000000000000";
+    const UPDATE_URL_TEMPLATE = "{% url 'main:update_skill' '00000000-0000-0000-0000-000000000000' %}";
+    const DELETE_URL_TEMPLATE = "{% url 'main:delete_skill' '00000000-0000-0000-0000-000000000000' %}";
+    const STAR_URL_TEMPLATE = "{% url 'main:toggle_skill_star' '00000000-0000-0000-0000-000000000000' %}";
+    const LOGIN_URL = "{% url 'main:login' %}";
+    let skillsAbortController;
+
+    // Elemen DOM
+    const loadingState = document.getElementById('loading');
+    const errorState = document.getElementById('error');
+    const emptyState = document.getElementById('empty');
+    const gridContainer = document.getElementById('grid');
+    const searchForm = document.getElementById('skill-search-form');
+    const searchInput = document.getElementById('search-input');
+    const categorySelect = document.getElementById('category-select');
+    const SEARCH_DEBOUNCE_DELAY = 300;
+    let searchDebounceTimer;
+
+    // Izin user dan token CSRF, dibaca dari atribut data-* pada #grid
+    const IS_AUTHENTICATED = gridContainer.dataset.authenticated === 'true';
+    const CAN_EDIT = gridContainer.dataset.canEdit === 'true';
+    const CAN_DELETE = gridContainer.dataset.canDelete === 'true';
+    const CSRF_TOKEN = gridContainer.dataset.csrf;
+
+    // Escape teks sebelum masuk ke innerHTML (mencegah XSS)
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function urlFor(template, id) {
+        return template.replace(DUMMY_ID, id);
+    }
+
+    // Menyembunyikan/Menampilkan section halaman
+    function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+        loadingState.classList.toggle('hide', !showLoading);
+        errorState.classList.toggle('hide', !showError);
+        emptyState.classList.toggle('hide', !showEmpty);
+        gridContainer.classList.toggle('hide', !showGrid);
+    }
+
+    // Tombol star (form untuk user login, link ke login untuk anonim)
+    function buildStarHtml(id, fields) {
+        const count = fields.star_count;
+        const starredClass = fields.is_starred ? ' is-starred' : '';
+        const label = fields.is_starred ? 'Unstar' : 'Star';
+        const tooltip = count > 0
+            ? `${count} pengguna memberi star`
+            : 'Jadilah yang pertama memberi star';
+        const inner = `<span aria-hidden="true">★</span> ${label} <span class="star-count">${count}</span>`;
+
+        if (!IS_AUTHENTICATED) {
+            return `<a href="${LOGIN_URL}" class="button button-star" title="Login untuk memberi star">${inner}</a>`;
+        }
+
+        return `
+            <form method="post" action="${urlFor(STAR_URL_TEMPLATE, id)}" class="star-form">
+                <input type="hidden" name="csrfmiddlewaretoken" value="${escapeHtml(CSRF_TOKEN)}">
+                <button type="submit" class="button button-star${starredClass}" title="${tooltip}">${inner}</button>
+            </form>`;
+    }
+
+    // Modal konfirmasi hapus (markup sama dengan components/skill_delete_modal.html)
+    function buildDeleteModalHtml(id, title, deleteUrl) {
+        const modalId = `delete-skill-${id}`;
+        return `
+            <p>
+                <button type="button"
+                        class="button button-danger"
+                        popovertarget="${modalId}"
+                        aria-label="Hapus ${escapeHtml(title)}"
+                        title="Hapus skill">Hapus Skill</button>
+            </p>
+            <div id="${modalId}"
+                 class="skill-delete-modal"
+                 popover="auto"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="${modalId}-title">
+                <button type="button"
+                        class="skill-delete-modal__backdrop"
+                        popovertarget="${modalId}"
+                        popovertargetaction="hide"
+                        aria-label="Tutup konfirmasi hapus"></button>
+                <div class="skill-delete-modal__content">
+                    <button type="button"
+                            class="skill-delete-modal__close"
+                            popovertarget="${modalId}"
+                            popovertargetaction="hide"
+                            aria-label="Tutup konfirmasi hapus">×</button>
+                    <h2 id="${modalId}-title">Hapus Skill?</h2>
+                    <p>Apakah Anda yakin ingin menghapus <strong>${escapeHtml(title)}</strong>?</p>
+                    <div class="skill-delete-modal__actions">
+                        <button type="button"
+                                class="button button-secondary"
+                                popovertarget="${modalId}"
+                                popovertargetaction="hide">Batal</button>
+                        <form method="post" action="${deleteUrl}">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="${escapeHtml(CSRF_TOKEN)}">
+                            <button type="submit" class="button button-danger">Ya, Hapus</button>
+                        </form>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    // Membuat elemen card skill
+    function buildSkillCardElement(item) {
+        const skill = item.fields;
+        const skillId = item.pk;
+
+        const article = document.createElement('article');
+        article.className = 'portofolio-card';
+
+        const editHtml = CAN_EDIT
+            ? `<a href="${urlFor(UPDATE_URL_TEMPLATE, skillId)}" class="button button-edit">Edit</a>`
+            : '';
+
+        const deleteHtml = CAN_DELETE
+            ? buildDeleteModalHtml(skillId, skill.title, urlFor(DELETE_URL_TEMPLATE, skillId))
+            : '';
+
+        article.innerHTML = `
+            <span class="portofolio-category">${escapeHtml(skill.category_display)}</span>
+            <h2>${escapeHtml(skill.title)}</h2>
+            <p class="portofolio-description">${escapeHtml(skill.description)}</p>
+            <div class="skill-card-actions">
+                ${buildStarHtml(skillId, skill)}
+                ${editHtml}
+                ${deleteHtml}
+            </div>
+        `;
+        return article;
+    }
+
+    function closeSkillModal() {
+        document.getElementById("add-skill-modal").hidePopover();
+    }
+
+    // Fetch data skill (judul + kategori)
+    async function fetchSkills() {
+        if (skillsAbortController) skillsAbortController.abort();
+        skillsAbortController = new AbortController();
+
+        const params = new URLSearchParams();
+        const title = searchInput.value.trim();
+        if (title) params.set('title', title);
+        if (categorySelect.value) params.set('category', categorySelect.value);
+        const url = params.toString() ? `${SKILL_ENDPOINT}?${params}` : SKILL_ENDPOINT;
+
+        try {
+            displayPageSection({ showLoading: true });
+
+            const response = await fetch(url, {
+                headers: { 'Accept': 'application/json' },
+                signal: skillsAbortController.signal,
+            });
+
+            if (!response.ok) throw new Error('Failed to fetch data');
+
+            const skillData = await response.json();
+
+            if (skillData.length === 0) {
+                displayPageSection({ showEmpty: true });
+            } else {
+                gridContainer.innerHTML = '';
+                skillData.forEach((item) => {
+                    gridContainer.appendChild(buildSkillCardElement(item));
+                });
+                displayPageSection({ showGrid: true });
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            console.error('Error loading skills:', error);
+            displayPageSection({ showError: true });
+        }
+    }
+
+    // Event handler pencarian (debounce) dan dropdown kategori
+    function searchSkills() {
+        fetchSkills();
+    }
+
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(searchSkills, SEARCH_DEBOUNCE_DELAY);
+    });
+
+    searchForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        clearTimeout(searchDebounceTimer);
+        searchSkills();
+    });
+
+    categorySelect.addEventListener('change', function () {
+        clearTimeout(searchDebounceTimer);
+        searchSkills();
+    });
+
+    // Start application
+    fetchSkills();
+</script>
 {% endblock content %}

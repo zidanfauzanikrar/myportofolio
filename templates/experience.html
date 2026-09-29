@@ -10,26 +10,30 @@
             <div class="experience-header">
                 <h1 class="section-title">Experience</h1>
                 {% if user.is_superuser %}
-                    <a href="{% url 'main:create_experience' %}"
-                    class="button experience-add-button">
+                    <button type="button"
+                            class="button experience-add-button"
+                            popovertarget="add-experience-modal">
                         <span aria-hidden="true">+</span>
                         Tambah Experience
-                    </a>
+                    </button>
                 {% endif %}
             </div>
 
-            <form method="get"
-                  action="{% url 'main:show_experience' %}"
-                  class="experience-search">
+            <form id="experience-search-form"
+                class="experience-search"
+                method="get"
+                action="{% url 'main:show_experience' %}">
                 <input type="search"
-                       name="title"
-                       value="{{ title_query }}"
-                       placeholder="Cari berdasarkan nama experience"
-                       class="experience-search__input"
-                       aria-label="Cari berdasarkan nama experience">
-                <select name="category"
-                        class="experience-search__select"
-                        aria-label="Filter berdasarkan kategori">
+                    id="search-input"
+                    name="title"
+                    value="{{ title_query }}"
+                    placeholder="Cari berdasarkan nama experience"
+                    class="experience-search__input"
+                    aria-label="Cari berdasarkan nama experience">
+                <select id="category-select"
+                    name="category"
+                    class="experience-search__select"
+                    aria-label="Filter berdasarkan kategori">
                     <option value="">Semua Kategori</option>
                     {% for value, label in category_choices %}
                         <option value="{{ value }}" {% if value == category_query %}selected{% endif %}>{{ label }}</option>
@@ -38,47 +42,247 @@
                 <button type="submit" class="button">Cari</button>
             </form>
 
-            <div class="portofolio-grid experience-grid">
-                {% for experience in experience_list %}
-                    <article class="portofolio-card">
-                        {% if experience.thumbnail %}
-                            <img src="{{ experience.thumbnail }}"
-                                 alt="Thumbnail {{ experience.title }}"
-                                 class="experience-thumbnail">
-                        {% endif %}
-                        <span class="portofolio-category">
-                            {{ experience.get_category_display }}
-                        </span>
-                        <h2>{{ experience.title }}</h2>
-                        <p class="portofolio-description">
-                            {{ experience.description }}
-                        </p>
+            <div id="loading" class="empty-state hide" role="status" aria-live="polite">
+                <p>Memuat experience...</p>
+            </div>
 
-                        {% if experience.is_ongoing %}
-                            <p class="experience-status">Ongoing</p>
-                        {% else %}
-                            <p class="experience-status">Completed</p>
-                        {% endif %}
+            <div id="error" class="empty-state hide" role="alert">
+                <p>Gagal memuat data experience. Silakan coba lagi.</p>
+            </div>
 
-                        <div class="experience-card-actions">
-                            {% include "components/experience_star.html" with experience=experience %}
-                            {% if perms.main.change_experience %}
-                                <a href="{% url 'main:update_experience' experience.id %}" class="button button-edit">Edit</a>
-                            {% endif %}
-                            {% if user.is_superuser %}
-                                {% include "components/experience_delete_modal.html" with experience=experience %}
-                            {% endif %}
-                        </div>
-                    </article>
-                {% empty %}
-                    {% if title_query %}
-                        <p class="empty-state">Tidak ada experience dengan nama tersebut.</p>
-                    {% else %}
-                        <p class="empty-state">Belum ada experience yang ditambahkan.</p>
-                    {% endif %}
-                {% endfor %}
+            <div id="empty" class="empty-state hide">
+                <p>Belum ada experience yang ditambahkan atau ditemukan.</p>
+            </div>
+
+            <div id="grid"
+                class="portofolio-grid experience-grid hide"
+                data-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}"
+                data-can-edit="{% if perms.main.change_experience %}true{% else %}false{% endif %}"
+                data-can-delete="{% if user.is_superuser %}true{% else %}false{% endif %}"
+                data-csrf="{{ csrf_token }}">
             </div>
         </div>
     </section>
 </main>
+
+{% if user.is_superuser %}
+    {% include "components/experience_form_modal.html" %}
+{% endif %}
+
+<script>
+    // Konfigurasi
+    const EXPERIENCE_ENDPOINT = "{% url 'main:get_experience_json' %}";
+    const DUMMY_ID = "00000000-0000-0000-0000-000000000000";
+    const UPDATE_URL_TEMPLATE = "{% url 'main:update_experience' '00000000-0000-0000-0000-000000000000' %}";
+    const DELETE_URL_TEMPLATE = "{% url 'main:delete_experience' '00000000-0000-0000-0000-000000000000' %}";
+    const STAR_URL_TEMPLATE = "{% url 'main:toggle_experience_star' '00000000-0000-0000-0000-000000000000' %}";
+    const LOGIN_URL = "{% url 'main:login' %}";
+    let experiencesAbortController;
+
+    // Elemen DOM
+    const loadingState = document.getElementById('loading');
+    const errorState = document.getElementById('error');
+    const emptyState = document.getElementById('empty');
+    const gridContainer = document.getElementById('grid');
+    const searchForm = document.getElementById('experience-search-form');
+    const searchInput = document.getElementById('search-input');
+    const categorySelect = document.getElementById('category-select');
+    const SEARCH_DEBOUNCE_DELAY = 300;
+    let searchDebounceTimer;
+
+    // Izin user dan token CSRF, dibaca dari atribut data-* pada #grid
+    const IS_AUTHENTICATED = gridContainer.dataset.authenticated === 'true';
+    const CAN_EDIT = gridContainer.dataset.canEdit === 'true';
+    const CAN_DELETE = gridContainer.dataset.canDelete === 'true';
+    const CSRF_TOKEN = gridContainer.dataset.csrf;
+
+    // Escape teks sebelum masuk ke innerHTML (mencegah XSS)
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function urlFor(template, id) {
+        return template.replace(DUMMY_ID, id);
+    }
+
+    // Menyembunyikan/Menampilkan section halaman
+    function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+        loadingState.classList.toggle('hide', !showLoading);
+        errorState.classList.toggle('hide', !showError);
+        emptyState.classList.toggle('hide', !showEmpty);
+        gridContainer.classList.toggle('hide', !showGrid);
+    }
+
+    // Tombol star (form untuk user login, link ke login untuk anonim)
+    function buildStarHtml(id, fields) {
+        const count = fields.star_count;
+        const starredClass = fields.is_starred ? ' is-starred' : '';
+        const label = fields.is_starred ? 'Unstar' : 'Star';
+        const tooltip = count > 0
+            ? `${count} pengguna memberi star`
+            : 'Jadilah yang pertama memberi star';
+        const inner = `<span aria-hidden="true">★</span> ${label} <span class="star-count">${count}</span>`;
+
+        if (!IS_AUTHENTICATED) {
+            return `<a href="${LOGIN_URL}" class="button button-star" title="Login untuk memberi star">${inner}</a>`;
+        }
+
+        return `
+            <form method="post" action="${urlFor(STAR_URL_TEMPLATE, id)}" class="star-form">
+                <input type="hidden" name="csrfmiddlewaretoken" value="${escapeHtml(CSRF_TOKEN)}">
+                <button type="submit" class="button button-star${starredClass}" title="${tooltip}">${inner}</button>
+            </form>`;
+    }
+
+    // Modal konfirmasi hapus (markup sama dengan components/experience_delete_modal.html)
+    function buildDeleteModalHtml(id, title, deleteUrl) {
+        const modalId = `delete-experience-${id}`;
+        return `
+            <p>
+                <button type="button"
+                        class="button button-danger"
+                        popovertarget="${modalId}"
+                        aria-label="Hapus ${escapeHtml(title)}"
+                        title="Hapus experience">Hapus Experience</button>
+            </p>
+            <div id="${modalId}"
+                 class="experience-delete-modal"
+                 popover="auto"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="${modalId}-title">
+                <button type="button"
+                        class="experience-delete-modal__backdrop"
+                        popovertarget="${modalId}"
+                        popovertargetaction="hide"
+                        aria-label="Tutup konfirmasi hapus"></button>
+                <div class="experience-delete-modal__content">
+                    <button type="button"
+                            class="experience-delete-modal__close"
+                            popovertarget="${modalId}"
+                            popovertargetaction="hide"
+                            aria-label="Tutup konfirmasi hapus">×</button>
+                    <h2 id="${modalId}-title">Hapus Experience?</h2>
+                    <p>Apakah Anda yakin ingin menghapus <strong>${escapeHtml(title)}</strong>?</p>
+                    <div class="experience-delete-modal__actions">
+                        <button type="button"
+                                class="button button-secondary"
+                                popovertarget="${modalId}"
+                                popovertargetaction="hide">Batal</button>
+                        <form method="post" action="${deleteUrl}">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="${escapeHtml(CSRF_TOKEN)}">
+                            <button type="submit" class="button button-danger">Ya, Hapus</button>
+                        </form>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    // Membuat elemen card experience
+    function buildExperienceCardElement(item) {
+        const experience = item.fields;
+        const experienceId = item.pk;
+
+        const article = document.createElement('article');
+        article.className = 'portofolio-card';
+
+        const thumbnailHtml = experience.thumbnail
+            ? `<img src="${escapeHtml(experience.thumbnail)}" alt="Thumbnail ${escapeHtml(experience.title)}" class="experience-thumbnail">`
+            : '';
+
+        const editHtml = CAN_EDIT
+            ? `<a href="${urlFor(UPDATE_URL_TEMPLATE, experienceId)}" class="button button-edit">Edit</a>`
+            : '';
+
+        const deleteHtml = CAN_DELETE
+            ? buildDeleteModalHtml(experienceId, experience.title, urlFor(DELETE_URL_TEMPLATE, experienceId))
+            : '';
+
+        article.innerHTML = `
+            ${thumbnailHtml}
+            <span class="portofolio-category">${escapeHtml(experience.category_display)}</span>
+            <h2>${escapeHtml(experience.title)}</h2>
+            <p class="portofolio-description">${escapeHtml(experience.description)}</p>
+            <p class="experience-status">${experience.is_ongoing ? 'Ongoing' : 'Completed'}</p>
+            <div class="experience-card-actions">
+                ${buildStarHtml(experienceId, experience)}
+                ${editHtml}
+                ${deleteHtml}
+            </div>
+        `;
+        return article;
+    }
+
+    function closeExperienceModal() {
+        document.getElementById("add-experience-modal").hidePopover();
+    }
+
+    // Fetch data experience (judul + kategori)
+    async function fetchExperiences() {
+        if (experiencesAbortController) experiencesAbortController.abort();
+        experiencesAbortController = new AbortController();
+
+        const params = new URLSearchParams();
+        const title = searchInput.value.trim();
+        if (title) params.set('title', title);
+        if (categorySelect.value) params.set('category', categorySelect.value);
+        const url = params.toString() ? `${EXPERIENCE_ENDPOINT}?${params}` : EXPERIENCE_ENDPOINT;
+
+        try {
+            displayPageSection({ showLoading: true });
+
+            const response = await fetch(url, {
+                headers: { 'Accept': 'application/json' },
+                signal: experiencesAbortController.signal,
+            });
+
+            if (!response.ok) throw new Error('Failed to fetch data');
+
+            const experienceData = await response.json();
+
+            if (experienceData.length === 0) {
+                displayPageSection({ showEmpty: true });
+            } else {
+                gridContainer.innerHTML = '';
+                experienceData.forEach((item) => {
+                    gridContainer.appendChild(buildExperienceCardElement(item));
+                });
+                displayPageSection({ showGrid: true });
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            console.error('Error loading experiences:', error);
+            displayPageSection({ showError: true });
+        }
+    }
+
+    // Event handler pencarian (debounce) dan dropdown kategori
+    function searchExperiences() {
+        fetchExperiences();
+    }
+    
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(searchExperiences, SEARCH_DEBOUNCE_DELAY);
+    });
+    
+    searchForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        clearTimeout(searchDebounceTimer);
+        searchExperiences();
+    });
+    
+    categorySelect.addEventListener('change', function () {
+        clearTimeout(searchDebounceTimer);
+        searchExperiences();
+    });
+    
+    // Start application
+    fetchExperiences();
+</script>
 {% endblock content %}
