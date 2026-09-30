@@ -32,11 +32,6 @@ class SkillForm(ModelForm):
                     "rows": 3,
                 }
             ),
-            "category": TextInput(
-                attrs={
-                    "placeholder": "Language, Programming Language, Soft-skill, Hard-skill",
-                }
-            ),
         }
 
     def clean_title(self):
@@ -46,7 +41,10 @@ class SkillForm(ModelForm):
         return title
 
     def clean_description(self):
-        return strip_tags(self.cleaned_data["description"]).strip()
+        description = strip_tags(self.cleaned_data["description"]).strip()
+        if not description:
+            raise ValidationError("Deskripsi tidak boleh hanya berisi tag HTML.")
+        return description
 
     def clean_category(self):
         return strip_tags(self.cleaned_data["category"]).strip()
@@ -81,11 +79,6 @@ class ExperienceForm(ModelForm):
                 attrs={
                     "placeholder": "Deskripsikan Keahlianmu",
                     "rows": 3,
-                }
-            ),
-            "category": TextInput(
-                attrs={
-                    "placeholder": "Internship, Research, Volunteer, Part-time, Full-time, Freelance",
                 }
             ),
             "thumbnail": URLInput(

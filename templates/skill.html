@@ -311,6 +311,22 @@
         console.log(`[${type}] ${title}: ${message}`);
     }
 
+    const SKILL_FIELD_LABELS = {
+        title: 'Nama Skill',
+        description: 'Deskripsi Skill',
+        category: 'Kategori Skill',
+    };
+
+    function formatFormErrors(errors, labels) {
+        return Object.entries(errors)
+            .map(([field, fieldErrors]) => {
+                const label = labels[field] || field;
+                const messages = fieldErrors.map((error) => error.message).join(' ');
+                return `${label}: ${messages}`;
+            })
+            .join(' | ');
+    }
+
     async function addSkill(event) {
         event.preventDefault();
 
@@ -332,9 +348,9 @@
                 fetchSkills();
             } else {
                 const errorMessages = result.errors
-                    ? Object.values(result.errors).flat().map(error => error.message)
-                    : [result.message || `Terjadi kesalahan (status ${response.status}).`];
-                showToast('Gagal menambahkan skill', errorMessages.join(' '), 'error');
+                    ? formatFormErrors(result.errors, EXPERIENCE_FIELD_LABELS)
+                    : result.message || `Terjadi kesalahan (status ${response.status}).`;
+                showToast('Gagal menambahkan experience', errorMessages, 'error');
             }
         } catch (error) {
             console.error('Error adding skill:', error);

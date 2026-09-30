@@ -319,6 +319,24 @@
         console.log(`[${type}] ${title}: ${message}`);
     }
 
+    const EXPERIENCE_FIELD_LABELS = {
+        title: 'Nama Experience',
+        description: 'Deskripsi Experience',
+        category: 'Kategori Experience',
+        thumbnail: 'Thumbnail',
+        ended_at: 'Tanggal Selesai',
+    };
+
+    function formatFormErrors(errors, labels) {
+        return Object.entries(errors)
+            .map(([field, fieldErrors]) => {
+                const label = labels[field] || field;
+                const messages = fieldErrors.map((error) => error.message).join(' ');
+                return `${label}: ${messages}`;
+            })
+            .join(' | ');
+    }
+
     async function addExperience(event) {
         event.preventDefault();
 
@@ -340,9 +358,9 @@
                 fetchExperiences();
             } else {
                 const errorMessages = result.errors
-                    ? Object.values(result.errors).flat().map(error => error.message)
-                    : [result.message || `Terjadi kesalahan (status ${response.status}).`];
-                showToast('Gagal menambahkan pengalaman', errorMessages.join(' '), 'error');
+                    ? formatFormErrors(result.errors, EXPERIENCE_FIELD_LABELS)
+                    : result.message || `Terjadi kesalahan (status ${response.status}).`;
+                showToast('Gagal menambahkan experience', errorMessages, 'error');
             }
         } catch (error) {
             console.error('Error adding pengalaman:', error);
