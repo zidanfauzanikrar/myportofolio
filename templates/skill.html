@@ -38,6 +38,16 @@
                         <option value="{{ value }}" {% if value == category_query %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
+                {% if user.is_authenticated %}
+                    <label class="starred-filter">
+                        <input type="checkbox"
+                               id="starred-filter"
+                               name="starred"
+                               value="1"
+                               {% if starred_query %}checked{% endif %}>
+                        <span>Starred by me</span>
+                    </label>
+                {% endif %}
                 <button type="submit" class="button">Cari</button>
             </form>
 
@@ -85,6 +95,7 @@
     const searchForm = document.getElementById('skill-search-form');
     const searchInput = document.getElementById('search-input');
     const categorySelect = document.getElementById('category-select');
+    const starredFilter = document.getElementById('starred-filter');
     const SEARCH_DEBOUNCE_DELAY = 300;
     let searchDebounceTimer;
 
@@ -233,6 +244,7 @@
         const title = searchInput.value.trim();
         if (title) params.set('title', title);
         if (categorySelect.value) params.set('category', categorySelect.value);
+        if (starredFilter && starredFilter.checked) params.set('starred', '1');
         const url = params.toString() ? `${SKILL_ENDPOINT}?${params}` : SKILL_ENDPOINT;
 
         try {
@@ -283,6 +295,13 @@
         clearTimeout(searchDebounceTimer);
         searchSkills();
     });
+
+    if (starredFilter) {
+        starredFilter.addEventListener('change', function () {
+            clearTimeout(searchDebounceTimer);
+            searchSkills();
+        });
+    }
 
     const CREATE_SKILL_ENDPOINT = "{% url 'main:create_skill_ajax' %}";
     const skillForm = document.getElementById('skill-form');

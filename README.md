@@ -254,3 +254,63 @@ AI Disclosure:
 Menggunakan Claude Sonnet 5 Extra Effort untuk membantu menambahkan model `create_editor_group` dan mempelajari alur validasi mengenai masing-masing role (user sudah login, guest, superuser, dan terutama role yang harus dibuat sendiri seperti editor). Selain itu, AI tersebut juga digunakan untuk membantu menerapkan dark mode toggle sebagai fungsionalitas tambahan week ini beserta halaman 403 yang customized. AI tersebut juga digunakan untuk perbaikan bug seperti messages yang muncul secara tak terduga pada halaman login, memperbaiki warna pada kode css agar semuanya menggunakan variabel agar mudah diubah ke dark mode, dan memastikan endpoint JSON tidak membocorkan data sensitif.
 
 Link Log Chat AI: https://claude.ai/share/792c6c31-e28b-4315-96da-7855fab3f149
+
+
+
+### Week 5
+
+### Dokumentasi Pembaruan
+
+## 1. Menampilkan Data dengan AJAX
+
+Halaman `experience.html` dan `skill.html` diubah dari render server-side penuh menjadi kerangka halaman saja. `show_experience`/`show_skill` tidak lagi mengirim `experience_list`/`skill_list`, hanya `title_query`, `category_query`, `category_choices`, dan `form` (untuk modal tambah data). Data daftar diambil lewat `fetch()` ke `get_experience_json`/`get_skill_json`, yang sekarang membangun JSON secara manual (bukan `serializers.serialize`), menyertakan `category_display`, `is_ongoing`, `star_count`, dan `is_starred` per item, dihitung dari sisi server memakai `annotate(Count("starred_by"))` supaya tidak membuka query terpisah per item.
+
+Empat kondisi ditangani lewat elemen `#loading`, `#error`, `#empty`, `#grid`, ditoggle lewat class `.hide` yang baru ditambahkan ke `style.css`.
+
+## 2. Pencarian dengan Debouncing dan Filter Kategori
+
+Input pencarian memicu `fetch()` setelah jeda 300ms dari ketikan terakhir (`setTimeout`/`clearTimeout`), bukan menunggu submit form. Dropdown kategori memicu pencarian langsung saat `change`. `AbortController` dipakai untuk membatalkan request sebelumnya kalau ada request baru, mencegah hasil yang lebih lama menimpa hasil yang lebih baru.
+
+## 3. Menambahkan Data lewat Modal dan AJAX
+
+Form tambah Experience/Skill dipindah ke dalam modal (Popover API), dipisah jadi `components/experience_modal_form.html` dan `components/skill_modal_form.html`, di-include setelah `</main>`, dibungkus `{% if user.is_superuser %}`. Endpoint baru `create_experience_ajax`/`create_skill_ajax` dibuat khusus untuk alur ini, memeriksa `is_authenticated`/`is_superuser` secara manual (bukan `@login_required`) supaya semua jalur keluar tetap membalas JSON dengan status yang sesuai (201 berhasil, 400 validasi gagal, 403 tidak berizin, 405 method salah). Token CSRF dikirim lewat header `X-CSRFToken`, dibaca dari cookie `csrftoken` lewat `getCookie()`. Setelah berhasil, daftar di-refresh lewat `fetchExperiences()`/`fetchSkills()` tanpa reload halaman.
+
+## 4. Notifikasi Toast
+
+Komponen toast tunggal (`components/toast.html`, di-include sekali di `base.html`) dikendalikan `toast.js`, memakai `popover="manual"` supaya tidak ikut mekanisme light-dismiss otomatis dan tidak saling menutup dengan modal lain yang sedang terbuka. Dipanggil lewat `showToast(title, message, type)` setelah tambah data berhasil maupun gagal, termasuk menampilkan pesan validasi dari server.
+
+## 5. Perlindungan XSS
+
+Di sisi client, semua teks dinamis (`title`, `description`, dst) yang disisipkan lewat `innerHTML` saat membangun kartu dilewatkan ke `escapeHtml()` terlebih dahulu. Di sisi server, `ExperienceForm` dan `SkillForm` mendapat method `clean_title`, `clean_description`, `clean_category` yang memakai `strip_tags`, dengan validasi tambahan di `clean_title` agar input yang isinya cuma tag HTML (jadi kosong setelah dibersihkan) ditolak sebagai error, bukan tersimpan sebagai string kosong.
+
+## 6. Perbaikan Bug
+
+* `experience.tech_stack`, sisa dari tutorial Project, direferensikan padahal `Experience` tidak punya field itu, diganti ke `experience.category`.
+* `starred_by_names` (daftar username yang memberi star) dihapus dari kedua endpoint JSON, mengulang kebocoran privasi yang sebelumnya sudah ditutup, diganti cukup dengan `star_count`.
+* `category_display` dan `is_ongoing` sempat tidak ikut dikirim di JSON, menyebabkan label kategori kosong dan semua experience tampil "Completed" apa pun status aslinya.
+* `category_query`, `category_choices`, dan `form` sempat tidak dikirim dari `show_experience`/`show_skill`, menyebabkan dropdown kategori tidak terisi dan modal tambah data terbuka tanpa field apa pun.
+* Pesan error dari modal tambah data digabung jadi satu string tanpa nama field, membuat pesan seperti "This field is required." muncul berulang tanpa keterangan field mana yang dimaksud.
+* Field `category` pada form masih memakai `TextInput` dengan placeholder berisi label tampilan, padahal validasi membandingkan ke value asli (`programming_language`, dst), menyebabkan error "not one of the available choices" saat user mengetik sesuai placeholder. Diperbaiki dengan mengembalikan ke `<select>` bawaan Django (menghapus override widget tersebut).
+* `.toast-success` di `style.css` sempat punya `border-left: 4px solid ;` tanpa warna, membuat toast sukses tidak bergaris warna seperti toast error/normal, diperbaiki memakai variabel `--safe` yang sudah didefinisikan tapi belum terpakai.
+
+## 7. Fitur Tambahan: Filter "Starred by Me"
+
+Halaman Experience dan Skill mendapat checkbox "Starred by me" yang hanya muncul untuk pengguna yang sudah login. Saat dicentang, daftar hanya menampilkan item yang sudah diberi star oleh pengguna tersebut. Filter ini bisa dikombinasikan dengan pencarian judul dan filter kategori, dan berjalan tanpa reload halaman.
+
+* Frontend: checkbox `#starred-filter` ditambahkan ke form pencarian. Perubahannya memicu `fetch()` dengan parameter `starred=1`. Status awalnya dibaca dari query string lewat context `starred_query`, dan elemennya tidak dirender untuk pengunjung anonim.
+* Backend: `get_experience_json` dan `get_skill_json` membaca parameter `starred` dan memfilter dengan `pk__in` terhadap himpunan id item yang di-star pengguna saat ini. Memfilter langsung dengan `filter(starred_by=request.user)` akan membatasi join yang dipakai `annotate(Count("starred_by"))`, sehingga `star_count` salah menjadi 1 untuk setiap item.
+* Keamanan: pengguna anonim tidak punya himpunan star, sehingga `starred=1` yang dikirim manual lewat URL menghasilkan daftar kosong. Respons tetap tidak memuat daftar username pemberi star.
+* Keterbatasan: tombol star masih memakai POST biasa dengan redirect, sehingga setelah star/unstar halaman dimuat ulang dan status filter kembali ke default. Mengubah star menjadi AJAX akan menyelesaikan hal ini.
+
+### Tugas 5
+
+1. Debouncing merupakan teknik menunda eksekusi suatu fungsi hingga jeda waktu tertentu berlalu sejak terakhir kali fungsi itu dipicu. Jika fungsi tersebut dipicu lagi sebelum jeda waktunya habis, maka timer sebelumnnya dibatalkan dan dihitung ulang dari awal. Ini menyebabkan fungsi baru benar-benar jalan setelah user berhenti memicu event baru untuk sementara waktu. Debouncing penting untuk pencarian AJAX agar mengurangi beban server, mencegah race conditon pada hasil, dan memberikan pengalaman yang lebih hemat baterai dan data untuk pengguna.
+
+2. `fetch()` merupakan fungsi asinkronus, jadi saat dipanggil, ia akan mengembalikan objek Promise yang tidak mengandung respons langsung karena request ke server membutuhkan waktu dan JavaScript tidak akan berdiam untuk menunggu request tersebut selesai. `await` di depan `fetch()` memberikan jeda eksekusi fungsi `async` yang memanggilnya hingga Promise itu selesai, lalu nilai response aslinya akan dikembalikan dan baris kode berikutnya dijalankan.
+
+3. Cross-Site Scripting (XSS) merupakan serangan di mana penyerang menyisipkan kode JavaScript berbahaya ke dalam halaman web, yang kemudian dijalankan di browser pengguna lain yang sedang membuka halaman tersebut, seolah-olah kode tersebut bagian asli dari situsnya. Melalui XSS, penyerang dapat mencuri cookie session, mengambil alih akun, mengirim request atas nama korban, atau mengubah tampilan halaman secara tersembunyi. Data melalui AJAX atau JS lebih rentan dibandingkan template Django biasa karena Django template memiliki auto-escaping bawaan yang mengubah karakter berbahaya menjadi entitas HTML sebelum dikirim ke browser, sedangkan data melalui JsonResponse tidak melalui mesin template Django dan innerHTML di JavaScript tidak melakukan escaping apapun.
+
+AI Disclosure: 
+Menggunakan Claude Sonnet 5.5 High untuk memberikan penyesuaian kode Tutorial terutama pada implementasi penyesuaian AJAX pada kode saya, membantu mencari dan membenarkan bug pada kode saya terutama pada notifikasi Toast yang terlihat aneh, membantu memberikan pemahaman lebih lanjut terkait materi minggu ini, serta membantu memberikan ide dan mengimplementasikan fitur tambahan untuk minggu ini.
+
+Link Log Chat AI: https://claude.ai/share/792c6c31-e28b-4315-96da-7855fab3f149

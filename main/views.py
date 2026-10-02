@@ -80,6 +80,7 @@ def show_experience(request):
         "name": name,
         "title_query": request.GET.get("title", "").strip(),
         "category_query": request.GET.get("category", "").strip(),
+        "starred_query": request.GET.get("starred", "") == "1",
         "category_choices": Experience.EXPERIENCE_CHOICES,
         "form": ExperienceForm(),
     }
@@ -120,10 +121,27 @@ def create_experience_ajax(request):
 
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
+def show_experience(request):
+    context = {
+        "name": name,
+        "title_query": request.GET.get("title", "").strip(),
+        "category_query": request.GET.get("category", "").strip(),
+        "starred_query": request.GET.get("starred", "") == "1",
+        "category_choices": Experience.EXPERIENCE_CHOICES,
+        "form": ExperienceForm(),
+    }
+    return render(request, "experience.html", context)
+
+
 def get_experience_json(request):
     title_query = request.GET.get("title", "").strip()
     category_query = request.GET.get("category", "").strip()
+    starred_only = request.GET.get("starred", "") == "1"
     experiences = Experience.objects.all()
+
+    starred_ids = set()
+    if request.user.is_authenticated:
+        starred_ids = set(request.user.starred_experience.values_list("pk", flat=True))
 
     if title_query:
         experiences = experiences.filter(title__icontains=title_query)
@@ -131,11 +149,10 @@ def get_experience_json(request):
     if category_query:
         experiences = experiences.filter(category=category_query)
 
-    experiences = experiences.annotate(star_count=Count("starred_by"))
+    if starred_only:
+        experiences = experiences.filter(pk__in=starred_ids)
 
-    starred_ids = set()
-    if request.user.is_authenticated:
-        starred_ids = set(request.user.starred_experience.values_list("pk", flat=True))
+    experiences = experiences.annotate(star_count=Count("starred_by"))
 
     data = []
     for experience in experiences:
@@ -208,6 +225,7 @@ def show_skill(request):
         "name": name,
         "title_query": request.GET.get("title", "").strip(),
         "category_query": request.GET.get("category", "").strip(),
+        "starred_query": request.GET.get("starred", "") == "1",
         "category_choices": Skill.SKILL_CHOICES,
         "form": SkillForm(),
     }
@@ -251,7 +269,12 @@ def create_skill_ajax(request):
 def get_skill_json(request):
     title_query = request.GET.get("title", "").strip()
     category_query = request.GET.get("category", "").strip()
+    starred_only = request.GET.get("starred", "") == "1"
     skills = Skill.objects.all()
+
+    starred_ids = set()
+    if request.user.is_authenticated:
+        starred_ids = set(request.user.starred_skill.values_list("pk", flat=True))
 
     if title_query:
         skills = skills.filter(title__icontains=title_query)
@@ -259,11 +282,10 @@ def get_skill_json(request):
     if category_query:
         skills = skills.filter(category=category_query)
 
-    skills = skills.annotate(star_count=Count("starred_by"))
+    if starred_only:
+        skills = skills.filter(pk__in=starred_ids)
 
-    starred_ids = set()
-    if request.user.is_authenticated:
-        starred_ids = set(request.user.starred_skill.values_list("pk", flat=True))
+    skills = skills.annotate(star_count=Count("starred_by"))
 
     data = []
     for skill in skills:

@@ -39,6 +39,16 @@
                         <option value="{{ value }}" {% if value == category_query %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
+                {% if user.is_authenticated %}
+                    <label class="starred-filter">
+                        <input type="checkbox"
+                               id="starred-filter"
+                               name="starred"
+                               value="1"
+                               {% if starred_query %}checked{% endif %}>
+                        <span>Starred by me</span>
+                    </label>
+                {% endif %}
                 <button type="submit" class="button">Cari</button>
             </form>
 
@@ -87,6 +97,7 @@
     const searchForm = document.getElementById('experience-search-form');
     const searchInput = document.getElementById('search-input');
     const categorySelect = document.getElementById('category-select');
+    const starredFilter = document.getElementById('starred-filter');
     const SEARCH_DEBOUNCE_DELAY = 300;
     let searchDebounceTimer;
 
@@ -241,6 +252,7 @@
         const title = searchInput.value.trim();
         if (title) params.set('title', title);
         if (categorySelect.value) params.set('category', categorySelect.value);
+        if (starredFilter && starredFilter.checked) params.set('starred', '1');
         const url = params.toString() ? `${EXPERIENCE_ENDPOINT}?${params}` : EXPERIENCE_ENDPOINT;
 
         try {
@@ -291,6 +303,13 @@
         clearTimeout(searchDebounceTimer);
         searchExperiences();
     });
+
+    if (starredFilter) {
+    starredFilter.addEventListener('change', function () {
+        clearTimeout(searchDebounceTimer);
+        searchExperiences();
+    });
+}
     
     const CREATE_EXPERIENCE_ENDPOINT = "{% url 'main:create_experience_ajax' %}";
     const experienceForm = document.getElementById('experience-form');
