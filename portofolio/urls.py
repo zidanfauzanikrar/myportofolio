@@ -6,4 +6,9 @@ urlpatterns = [
     path("", include("main.urls")),
 ]
 
+urlpatterns += [
+    path("api/v1/", include("main.api_urls")),
+    path("api-auth/", include("rest_framework.urls")),
+]
+
 handler403 = "main.views.custom_permission_denied"
