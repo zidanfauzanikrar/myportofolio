@@ -683,11 +683,6 @@ h1,
     line-height: 1;
 }
 
-.button-edit {
-    width: 14%;
-    margin-top: 0.5rem;
-}
-
 .skill-search,
 .experience-search {
     display: flex;
@@ -1097,4 +1092,22 @@ h1,
     height: 1rem;
     accent-color: var(--accent);
     cursor: pointer;
+}
+
+/* ===== Perbaikan layout (header, tombol Edit, tombol star) ===== */
+.site-header .container { flex-wrap: wrap; gap: 0.5rem 2rem; }
+.brand { white-space: nowrap; }
+.site-header nav { flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; }
+.experience-status { margin-bottom: 1rem; }
+.skill-card-actions,
+.experience-card-actions { gap: 0.75rem; padding-top: 0.5rem; }
+.skill-card-actions > .button,
+.experience-card-actions > .button,
+.experience-card-actions .star-form .button { align-self: flex-start; }
+.button-edit { width: auto; margin-top: 0; }
+.button-star { white-space: nowrap; }
+.portofolio-card h2,
+.portofolio-card p { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+    .portofolio-grid, .skill-grid, .experience-grid { grid-template-columns: 1fr; }
 }
