@@ -1,8 +1,15 @@
 from django.urls import path
-from main.api_views import experience_list, skill_list
+
+from main import api_views
 
 app_name = "api"
+
 urlpatterns = [
-    path("experience/", experience_list, name="experience-list"),
-    path("skills/", skill_list, name="skill_list"),
+    path("experience/", api_views.experience_list, name="experience-list"),
+    path("experience/<uuid:pk>/", api_views.experience_detail, name="experience-detail"),
+    path("experience/<uuid:pk>/star/", api_views.experience_star, name="experience-star"),
+
+    path("skills/", api_views.skill_list, name="skill-list"),
+    path("skills/<uuid:pk>/", api_views.skill_detail, name="skill-detail"),
+    path("skills/<uuid:pk>/star/", api_views.skill_star, name="skill-star"),
 ]
