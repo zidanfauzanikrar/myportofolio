@@ -67,7 +67,7 @@
                  class="portofolio-grid skill-grid hide"
                  data-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}"
                  data-can-edit="{% if perms.main.change_skill %}true{% else %}false{% endif %}"
-                 data-can-delete="{% if user.is_superuser %}true{% else %}false{% endif %}"
+                 data-can-delete="{% if perms.main.delete_skill %}true{% else %}false{% endif %}"
                  data-csrf="{{ csrf_token }}"></div>
         </div>
     </section>
@@ -76,16 +76,18 @@
 {% if user.is_superuser %}
     {% include "components/skill_form_modal.html" %}
 {% endif %}
+{% if perms.main.change_skill %}
+    {% include "components/skill_edit_modal.html" %}
+{% endif %}
 
 <script>
-    // Konfigurasi
-    const SKILL_ENDPOINT = "{% url 'main:get_skill_json' %}";
+    // Konfigurasi endpoint (DRF)
+    const SKILL_ENDPOINT = "{% url 'api:skill-list' %}";
+    const CREATE_SKILL_ENDPOINT = SKILL_ENDPOINT;
     const DUMMY_ID = "00000000-0000-0000-0000-000000000000";
-    const UPDATE_URL_TEMPLATE = "{% url 'main:update_skill' '00000000-0000-0000-0000-000000000000' %}";
-    const DELETE_URL_TEMPLATE = "{% url 'main:delete_skill' '00000000-0000-0000-0000-000000000000' %}";
-    const STAR_URL_TEMPLATE = "{% url 'main:toggle_skill_star' '00000000-0000-0000-0000-000000000000' %}";
+    const DETAIL_URL_TEMPLATE = "{% url 'api:skill-detail' '00000000-0000-0000-0000-000000000000' %}";
+    const STAR_URL_TEMPLATE = "{% url 'api:skill-star' '00000000-0000-0000-0000-000000000000' %}";
     const LOGIN_URL = "{% url 'main:login' %}";
-    let skillsAbortController;
 
     // Elemen DOM
     const loadingState = document.getElementById('loading');
@@ -96,8 +98,13 @@
     const searchInput = document.getElementById('search-input');
     const categorySelect = document.getElementById('category-select');
     const starredFilter = document.getElementById('starred-filter');
+    const skillForm = document.getElementById('skill-form');
+    const skillEditForm = document.getElementById('skill-edit-form');
     const SEARCH_DEBOUNCE_DELAY = 300;
     let searchDebounceTimer;
+    let skillsAbortController;
+    let editingId = null;
+    const skillsById = new Map();
 
     // Izin user dan token CSRF, dibaca dari atribut data-* pada #grid
     const IS_AUTHENTICATED = gridContainer.dataset.authenticated === 'true';
@@ -105,18 +112,36 @@
     const CAN_DELETE = gridContainer.dataset.canDelete === 'true';
     const CSRF_TOKEN = gridContainer.dataset.csrf;
 
+    const SKILL_FIELD_LABELS = {
+        title: 'Nama Skill',
+        description: 'Deskripsi Skill',
+        category: 'Kategori Skill',
+    };
+
     // Escape teks sebelum masuk ke innerHTML (mencegah XSS)
     function escapeHtml(value) {
         return String(value ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
     }
 
     function urlFor(template, id) {
         return template.replace(DUMMY_ID, id);
+    }
+
+    function getCookie(name) {
+        const prefix = `${name}=`;
+        const cookie = document.cookie.split(';').map((value) => value.trim())
+            .find((value) => value.startsWith(prefix));
+        return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal && modal.hidePopover) modal.hidePopover();
     }
 
     // Menyembunyikan/Menampilkan section halaman
@@ -127,11 +152,61 @@
         gridContainer.classList.toggle('hide', !showGrid);
     }
 
-    // Tombol star (form untuk user login, link ke login untuk anonim)
-    function buildStarHtml(id, fields) {
-        const count = fields.star_count;
-        const starredClass = fields.is_starred ? ' is-starred' : '';
-        const label = fields.is_starred ? 'Unstar' : 'Star';
+    // Error DRF: {detail: "..."} atau {field: ["pesan", ...]}
+    function formatApiErrors(data, status) {
+        if (data && typeof data.detail === 'string') return data.detail;
+        const parts = Object.entries(data || {}).map(([field, errors]) => {
+            const messages = (Array.isArray(errors) ? errors : [errors])
+                .filter((message) => typeof message === 'string').join(' ');
+            if (!messages) return '';
+            return field === 'non_field_errors'
+                ? messages
+                : `${SKILL_FIELD_LABELS[field] || field}: ${messages}`;
+        }).filter(Boolean);
+        return parts.join(' | ') || `Terjadi kesalahan (status ${status}).`;
+    }
+
+    // Semua request tulis (POST/PATCH/DELETE) ke API lewat sini
+    async function sendApi(url, method, payload) {
+        const headers = {
+            'Accept': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken') || CSRF_TOKEN,
+        };
+        if (payload !== undefined) headers['Content-Type'] = 'application/json';
+
+        let response;
+        try {
+            response = await fetch(url, {
+                method,
+                headers,
+                body: payload === undefined ? undefined : JSON.stringify(payload),
+            });
+        } catch (error) {
+            throw new Error('Tidak dapat terhubung ke server. Silakan coba lagi.');
+        }
+
+        if (response.status === 204) return null;
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(formatApiErrors(data, response.status));
+        return data;
+    }
+
+    // Nilai form -> payload JSON untuk serializer
+    function readSkillPayload(form) {
+        const data = new FormData(form);
+        const text = (name) => String(data.get(name) ?? '').trim();
+        return {
+            title: text('title'),
+            description: text('description'),
+            category: text('category'),
+        };
+    }
+
+    // Tombol star (tombol AJAX untuk user login, link ke login untuk anonim)
+    function buildStarHtml(item) {
+        const count = item.star_count;
+        const starredClass = item.is_starred ? ' is-starred' : '';
+        const label = item.is_starred ? 'Unstar' : 'Star';
         const tooltip = count > 0
             ? `${count} pengguna memberi star`
             : 'Jadilah yang pertama memberi star';
@@ -142,21 +217,22 @@
         }
 
         return `
-            <form method="post" action="${urlFor(STAR_URL_TEMPLATE, id)}" class="star-form">
-                <input type="hidden" name="csrfmiddlewaretoken" value="${escapeHtml(CSRF_TOKEN)}">
-                <button type="submit" class="button button-star${starredClass}" title="${tooltip}">${inner}</button>
+            <form class="star-form">
+                <button type="button" class="button button-star${starredClass}"
+                        data-action="star" data-id="${escapeHtml(item.id)}"
+                        title="${tooltip}">${inner}</button>
             </form>`;
     }
 
-    // Modal konfirmasi hapus (markup sama dengan components/skill_delete_modal.html)
-    function buildDeleteModalHtml(id, title, deleteUrl) {
-        const modalId = `delete-skill-${id}`;
+    // Modal konfirmasi hapus per card; tombol "Ya, Hapus" memanggil DELETE lewat JS
+    function buildDeleteModalHtml(item) {
+        const modalId = `delete-skill-${item.id}`;
         return `
             <p>
                 <button type="button"
                         class="button button-danger"
                         popovertarget="${modalId}"
-                        aria-label="Hapus ${escapeHtml(title)}"
+                        aria-label="Hapus ${escapeHtml(item.title)}"
                         title="Hapus skill">Hapus Skill</button>
             </p>
             <div id="${modalId}"
@@ -177,53 +253,37 @@
                             popovertargetaction="hide"
                             aria-label="Tutup konfirmasi hapus">×</button>
                     <h2 id="${modalId}-title">Hapus Skill?</h2>
-                    <p>Apakah Anda yakin ingin menghapus <strong>${escapeHtml(title)}</strong>?</p>
+                    <p>Apakah Anda yakin ingin menghapus <strong>${escapeHtml(item.title)}</strong>?</p>
                     <div class="skill-delete-modal__actions">
                         <button type="button"
                                 class="button button-secondary"
                                 popovertarget="${modalId}"
                                 popovertargetaction="hide">Batal</button>
-                        <form method="post" action="${deleteUrl}">
-                            <input type="hidden" name="csrfmiddlewaretoken" value="${escapeHtml(CSRF_TOKEN)}">
-                            <button type="submit" class="button button-danger">Ya, Hapus</button>
-                        </form>
+                        <button type="button" class="button button-danger"
+                                data-action="delete" data-id="${escapeHtml(item.id)}">Ya, Hapus</button>
                     </div>
                 </div>
             </div>`;
     }
 
-    // Mengubah karakter khusus HTML menjadi entity agar ditampilkan sebagai teks
-    function escapeHtml(value) {
-        return String(value ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#39;');
-    }
-
-    // Membuat elemen card skill
+    // Membuat elemen card (data flat dari API: item.id, item.title, ...)
     function buildSkillCardElement(item) {
-        const skill = item.fields;
-        const skillId = item.pk;
-
         const article = document.createElement('article');
         article.className = 'portofolio-card';
+        article.dataset.id = item.id;
 
         const editHtml = CAN_EDIT
-            ? `<a href="${urlFor(UPDATE_URL_TEMPLATE, skillId)}" class="button button-edit">Edit</a>`
+            ? `<button type="button" class="button button-edit" data-action="edit" data-id="${escapeHtml(item.id)}">Edit</button>`
             : '';
 
-        const deleteHtml = CAN_DELETE
-            ? buildDeleteModalHtml(skillId, skill.title, urlFor(DELETE_URL_TEMPLATE, skillId))
-            : '';
+        const deleteHtml = CAN_DELETE ? buildDeleteModalHtml(item) : '';
 
         article.innerHTML = `
-            <span class="portofolio-category">${escapeHtml(skill.category_display)}</span>
-            <h2>${escapeHtml(skill.title)}</h2>
-            <p class="portofolio-description">${escapeHtml(skill.description)}</p>
+            <span class="portofolio-category">${escapeHtml(item.category_display)}</span>
+            <h2>${escapeHtml(item.title)}</h2>
+            <p class="portofolio-description">${escapeHtml(item.description)}</p>
             <div class="skill-card-actions">
-                ${buildStarHtml(skillId, skill)}
+                ${buildStarHtml(item)}
                 ${editHtml}
                 ${deleteHtml}
             </div>
@@ -231,11 +291,7 @@
         return article;
     }
 
-    function closeSkillModal() {
-        document.getElementById("add-skill-modal").hidePopover();
-    }
-
-    // Fetch data skill (judul + kategori)
+    // Fetch daftar (judul + kategori + starred)
     async function fetchSkills() {
         if (skillsAbortController) skillsAbortController.abort();
         skillsAbortController = new AbortController();
@@ -255,19 +311,13 @@
                 signal: skillsAbortController.signal,
             });
 
-            if (!response.ok) throw new Error('Failed to fetch data');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-            const skillData = await response.json();
-
-            if (skillData.length === 0) {
-                displayPageSection({ showEmpty: true });
-            } else {
-                gridContainer.innerHTML = '';
-                skillData.forEach((item) => {
-                    gridContainer.appendChild(buildSkillCardElement(item));
-                });
-                displayPageSection({ showGrid: true });
-            }
+            const items = await response.json();
+            skillsById.clear();
+            items.forEach((item) => skillsById.set(item.id, item));
+            gridContainer.replaceChildren(...items.map((item) => buildSkillCardElement(item)));
+            displayPageSection({ showGrid: items.length > 0, showEmpty: items.length === 0 });
         } catch (error) {
             if (error.name === 'AbortError') return;
             console.error('Error loading skills:', error);
@@ -275,7 +325,95 @@
         }
     }
 
-    // Event handler pencarian (debounce) dan dropdown kategori
+    // Create (modal tambah, hanya superuser)
+    async function addSkill(event) {
+        event.preventDefault();
+
+        const submitButton = skillForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+
+        try {
+            await sendApi(CREATE_SKILL_ENDPOINT, 'POST', readSkillPayload(skillForm));
+            skillForm.reset();
+            closeModal('add-skill-modal');
+            showToast('Berhasil', 'Skill baru berhasil ditambahkan!', 'success');
+            fetchSkills();
+        } catch (error) {
+            showToast('Gagal menambahkan skill', error.message, 'error');
+        } finally {
+            submitButton.disabled = false;
+        }
+    }
+
+    // Update (modal edit, PATCH ke endpoint detail)
+    function openEditModal(id) {
+        const item = skillsById.get(id);
+        if (!item || !skillEditForm) return;
+        editingId = id;
+        skillEditForm.elements['title'].value = item.title;
+        skillEditForm.elements['description'].value = item.description;
+        skillEditForm.elements['category'].value = item.category;
+        document.getElementById('edit-skill-modal').showPopover();
+    }
+
+    async function updateSkill(event) {
+        event.preventDefault();
+        if (!editingId) return;
+
+        const submitButton = skillEditForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+
+        try {
+            await sendApi(urlFor(DETAIL_URL_TEMPLATE, editingId), 'PATCH', readSkillPayload(skillEditForm));
+            closeModal('edit-skill-modal');
+            editingId = null;
+            showToast('Berhasil', 'Skill berhasil diperbarui!', 'success');
+            fetchSkills();
+        } catch (error) {
+            showToast('Gagal memperbarui skill', error.message, 'error');
+        } finally {
+            submitButton.disabled = false;
+        }
+    }
+
+    if (skillForm) skillForm.addEventListener('submit', addSkill);
+    if (skillEditForm) skillEditForm.addEventListener('submit', updateSkill);
+
+    // Aksi pada card (edit / star / hapus) lewat event delegation
+    gridContainer.addEventListener('click', async function (event) {
+        const button = event.target.closest('button[data-action]');
+        if (!button || button.disabled) return;
+
+        const { action, id } = button.dataset;
+        if (action === 'edit') {
+            openEditModal(id);
+            return;
+        }
+
+        button.disabled = true;
+        try {
+            if (action === 'star') {
+                const updated = await sendApi(urlFor(STAR_URL_TEMPLATE, id), 'POST');
+                if (starredFilter && starredFilter.checked) {
+                    // Filter "Starred by me" aktif: card yang di-unstar harus hilang
+                    await fetchSkills();
+                } else {
+                    skillsById.set(updated.id, updated);
+                    button.closest('article').replaceWith(buildSkillCardElement(updated));
+                }
+            } else if (action === 'delete') {
+                await sendApi(urlFor(DETAIL_URL_TEMPLATE, id), 'DELETE');
+                showToast('Berhasil', 'Skill berhasil dihapus!', 'success');
+                await fetchSkills();
+            }
+        } catch (error) {
+            showToast('Permintaan gagal', error.message, 'error');
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    // Pencarian (debounce), dropdown kategori, dan filter starred
     function searchSkills() {
         fetchSkills();
     }
@@ -301,86 +439,6 @@
             clearTimeout(searchDebounceTimer);
             searchSkills();
         });
-    }
-
-    const CREATE_SKILL_ENDPOINT = "{% url 'main:create_skill_ajax' %}";
-    const skillForm = document.getElementById('skill-form');
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    function closeSkillModal() {
-        const modal = document.getElementById('add-skill-modal');
-        if (modal && modal.hidePopover) modal.hidePopover();
-    }
-
-    function showToast(title, message, type = 'info') {
-        console.log(`[${type}] ${title}: ${message}`);
-    }
-
-    const SKILL_FIELD_LABELS = {
-        title: 'Nama Skill',
-        description: 'Deskripsi Skill',
-        category: 'Kategori Skill',
-    };
-
-    function formatFormErrors(errors, labels) {
-        return Object.entries(errors)
-            .map(([field, fieldErrors]) => {
-                const label = labels[field] || field;
-                const messages = fieldErrors.map((error) => error.message).join(' ');
-                return `${label}: ${messages}`;
-            })
-            .join(' | ');
-    }
-
-    async function addSkill(event) {
-        event.preventDefault();
-
-        const submitButton = skillForm.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-
-        try {
-            const response = await fetch(CREATE_SKILL_ENDPOINT, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': getCookie('csrftoken') },
-                body: new FormData(skillForm),
-            });
-            const result = await response.json().catch(() => ({}));
-
-            if (response.ok) {
-                skillForm.reset();
-                closeSkillModal();
-                showToast('Berhasil', 'Skill baru berhasil ditambahkan!', 'success');
-                fetchSkills();
-            } else {
-                const errorMessages = result.errors
-                    ? formatFormErrors(result.errors, EXPERIENCE_FIELD_LABELS)
-                    : result.message || `Terjadi kesalahan (status ${response.status}).`;
-                showToast('Gagal menambahkan experience', errorMessages, 'error');
-            }
-        } catch (error) {
-            console.error('Error adding skill:', error);
-            showToast('Gagal menambahkan skill', 'Tidak dapat terhubung ke server. Silakan coba lagi.', 'error');
-        } finally {
-            submitButton.disabled = false;
-        }
-    }
-
-    if (skillForm) {
-        skillForm.addEventListener('submit', addSkill);
     }
 
     // Start application

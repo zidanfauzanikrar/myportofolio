@@ -83,6 +83,7 @@ def show_experience(request):
         "starred_query": request.GET.get("starred", "") == "1",
         "category_choices": Experience.EXPERIENCE_CHOICES,
         "form": ExperienceForm(),
+        "edit_form": ExperienceForm(auto_id="id_edit_%s"),
     }
     return render(request, "experience.html", context)
 
@@ -120,17 +121,6 @@ def create_experience_ajax(request):
         )
 
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
-
-def show_experience(request):
-    context = {
-        "name": name,
-        "title_query": request.GET.get("title", "").strip(),
-        "category_query": request.GET.get("category", "").strip(),
-        "starred_query": request.GET.get("starred", "") == "1",
-        "category_choices": Experience.EXPERIENCE_CHOICES,
-        "form": ExperienceForm(),
-    }
-    return render(request, "experience.html", context)
 
 
 def get_experience_json(request):
@@ -228,6 +218,7 @@ def show_skill(request):
         "starred_query": request.GET.get("starred", "") == "1",
         "category_choices": Skill.SKILL_CHOICES,
         "form": SkillForm(),
+        "edit_form": SkillForm(auto_id="id_edit_%s"),
     }
     return render(request, "skill.html", context)
 
