@@ -1111,3 +1111,11 @@ h1,
 @media (max-width: 600px) {
     .portofolio-grid, .skill-grid, .experience-grid { grid-template-columns: 1fr; }
 }
+
+.experience-form-modal,
+.skill-form-modal,
+.experience-delete-modal,
+.skill-delete-modal { color: var(--ink); }
+
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
