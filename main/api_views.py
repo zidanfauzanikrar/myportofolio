@@ -7,7 +7,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from main.models import Experience, Skill
-from main.permissions import IsPortfolioOwnerOrReadOnly, has_model_permission
+from main.permissions import (
+    IsPortfolioOwnerOrEditorOrReadOnly,
+    IsPortfolioOwnerOrReadOnly,
+)
 from main.serializers import ExperienceSerializer, SkillSerializer
 
 
@@ -100,7 +103,7 @@ def experience_list(request):
 
 @api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
 @authentication_classes([SessionAuthentication])
-@permission_classes([has_model_permission(Experience)])
+@permission_classes([IsPortfolioOwnerOrEditorOrReadOnly(Experience)])
 def experience_detail(request, pk):
     return _detail(request, pk, Experience, ExperienceSerializer)
 
@@ -114,7 +117,7 @@ def skill_list(request):
 
 @api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
 @authentication_classes([SessionAuthentication])
-@permission_classes([has_model_permission(Skill)])
+@permission_classes([IsPortfolioOwnerOrEditorOrReadOnly(Skill)])
 def skill_detail(request, pk):
     return _detail(request, pk, Skill, SkillSerializer)
 

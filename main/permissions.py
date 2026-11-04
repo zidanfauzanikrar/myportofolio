@@ -19,14 +19,27 @@ ACTION_BY_METHOD = {
 }
 
 
-def has_model_permission(model):
-    """Baca publik; tulis butuh izin Django model (add/change/delete_<model>).
+def IsPortfolioOwnerOrEditorOrReadOnly(model):
+    """Membuat kelas permission untuk satu model (dipakai di @permission_classes).
 
-    Superuser otomatis lolos. Group "Editor" (change_skill / change_experience)
-    bisa update, tetapi tidak bisa delete kecuali diberi izin delete.
+    Pemakaian: @permission_classes([IsPortfolioOwnerOrEditorOrReadOnly(Skill)])
+
+    - Baca (GET/HEAD/OPTIONS): terbuka untuk semua orang.
+    - PUT/PATCH: butuh izin change_<model>, dimiliki pemilik (superuser) dan Editor.
+    - POST: butuh izin add_<model>; DELETE: butuh izin delete_<model>.
+      Editor hanya diberi change_*, jadi ditolak untuk create dan delete.
+
+    Izin dicek dengan has_perm (Django Permission), bukan nama Group, sehingga
+    mencabut izin di admin langsung mencabut akses.
+
+    Catatan: ini izin berbasis peran untuk SATU portofolio. Pemeriksaan ini
+    berlaku di level view/model dan tidak menyaring objek milik pengguna lain.
+    Kalau aplikasi kelak punya banyak pemilik dan data privat, pemeriksaan
+    objek (has_object_permission) dan pembatasan queryset perlu didesain
+    tersendiri.
     """
 
-    class HasModelPermission(BasePermission):
+    class _IsPortfolioOwnerOrEditorOrReadOnly(BasePermission):
         message = "You do not have permission to perform this action."
 
         def has_permission(self, request, view):
@@ -39,4 +52,5 @@ def has_model_permission(model):
             perm = f"{opts.app_label}.{action}_{opts.model_name}"
             return request.user.has_perm(perm)
 
-    return HasModelPermission
+    _IsPortfolioOwnerOrEditorOrReadOnly.__name__ = f"IsPortfolioOwnerOrEditorOrReadOnly_{model.__name__}"
+    return _IsPortfolioOwnerOrEditorOrReadOnly
