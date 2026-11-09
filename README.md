@@ -314,3 +314,97 @@ AI Disclosure:
 Menggunakan Claude Sonnet 5.5 High untuk memberikan penyesuaian kode Tutorial terutama pada implementasi penyesuaian AJAX pada kode saya, membantu mencari dan membenarkan bug pada kode saya terutama pada notifikasi Toast yang terlihat aneh, membantu memberikan pemahaman lebih lanjut terkait materi minggu ini, serta membantu memberikan ide dan mengimplementasikan fitur tambahan untuk minggu ini.
 
 Link Log Chat AI: https://claude.ai/share/792c6c31-e28b-4315-96da-7855fab3f149
+
+
+
+### Week 6
+
+### Dokumentasi Pembaruan
+
+## 1. REST API dengan Django REST Framework
+
+Endpoint JSON buatan sendiri (`get_experience_json`, `get_skill_json`, `create_experience_ajax`, `create_skill_ajax`) digantikan oleh API berbasis Django REST Framework untuk model `Experience` dan `Skill`. Halaman Experience dan Skill tidak lagi memakai endpoint lama tersebut.
+
+* `serializers.py` : `SkillSerializer` dan `ExperienceSerializer` berbagi satu mixin (`PortfolioItemMixin`) yang berisi validasi teks (`strip_tags`, judul/deskripsi tidak boleh kosong setelah dibersihkan) serta field hitungan `star_count` dan `is_starred`. Kedua field itu read-only dan dihitung dari `annotate()` sehingga jumlah query tetap konstan berapa pun jumlah itemnya. Daftar username pemberi star tidak pernah dikirim.
+* `api_views.py` : memakai `@api_view` dengan `SessionAuthentication`. Daftar mendukung filter `?title=`, `?category=`, dan `?starred=1`. Pembuatan data membalas 201, validasi gagal membalas 400, tidak berizin membalas 403, dan id tidak ditemukan membalas 404.
+* `api_urls.py` : didaftarkan di `urls.py` proyek lewat `path("api/v1/", include("main.api_urls"))` dengan namespace `api`, ditambah `api-auth/` untuk login di Browsable API.
+
+| Endpoint | Method | Fungsi |
+| --- | --- | --- |
+| `/api/v1/skills/` dan `/api/v1/experience/` | GET, POST | Daftar (dengan filter) dan tambah data |
+| `/api/v1/skills/<uuid>/` dan `/api/v1/experience/<uuid>/` | GET, PUT, PATCH, DELETE | Detail, ubah (penuh atau sebagian), hapus |
+| `/api/v1/skills/<uuid>/star/` dan `/api/v1/experience/<uuid>/star/` | POST | Star/unstar, membalas item terbaru |
+
+## 2. Izin Akses Berbasis Peran
+
+Izin tulis dicek lewat `permissions.py`. `IsPortfolioOwnerOrReadOnly` dipakai pada endpoint daftar (POST hanya superuser). `IsPortfolioOwnerOrEditorOrReadOnly(Model)` dipakai pada endpoint detail dan memeriksa Permission Django lewat `has_perm` (`change_*` untuk PUT/PATCH, `add_*` untuk POST, `delete_*` untuk DELETE), bukan nama Group, sehingga mencabut izin di admin langsung mencabut aksesnya. Endpoint star memakai `IsAuthenticated`.
+
+| Peran | Baca | Star | PUT/PATCH | POST | DELETE |
+| --- | --- | --- | --- | --- | --- |
+| Pengunjung (belum login) | Ya | Tidak | Tidak | Tidak | Tidak |
+| Pengguna biasa | Ya | Ya | Tidak | Tidak | Tidak |
+| Editor | Ya | Ya | Ya | Tidak | Tidak |
+| Pemilik (superuser) | Ya | Ya | Ya | Ya | Ya |
+
+Catatan: ini izin berbasis peran untuk satu portofolio. Permission per-view tidak menyaring objek milik pengguna lain, jadi jika kelak ada banyak pemilik dan data privat, pemeriksaan objek dan pembatasan queryset perlu didesain tersendiri. Karena memakai `SessionAuthentication`, setiap request tulis dari pengguna yang login wajib menyertakan token CSRF.
+
+## 3. Pembaruan Frontend
+
+Script di `experience.html` dan `skill.html` disesuaikan dengan kontrak data baru.
+
+* Data item sekarang flat (`item.id`, `item.title`, ...), bukan `item.pk` dan `item.fields`. Endpoint dibaca lewat `{% url 'api:...' %}`.
+* Semua request tulis melewati satu fungsi `sendApi()` yang mengirim JSON dengan header `X-CSRFToken`. Error DRF (`{field: [pesan]}` maupun `{detail: ...}`) diubah menjadi pesan yang ditampilkan lewat toast, termasuk pesan saat server tidak terjangkau.
+* Edit lewat modal: tombol Edit membuka modal (`components/experience_edit_modal.html`, `components/skill_edit_modal.html`) yang terisi data kartu, lalu mengirim `PATCH` ke endpoint detail. Form edit memakai `auto_id="id_edit_%s"` agar ID inputnya tidak bentrok dengan form tambah.
+* Star lewat AJAX: tombol memanggil endpoint `/star/`, kartu diganti di tempat tanpa reload halaman. Jika filter "Starred by me" aktif, daftar dimuat ulang agar kartu yang di-unstar hilang.
+* Hapus lewat AJAX: tombol "Ya, Hapus" pada modal konfirmasi memanggil `DELETE`. Tombol Hapus kini mengikuti izin `perms.main.delete_*`, bukan lagi `user.is_superuser`, sehingga Editor tidak melihatnya.
+* Tambah data memakai `POST` JSON ke API (bukan lagi FormData ke `*-add-ajax/`). Tanggal selesai Experience dikirim sebagai `YYYY-MM-DDT00:00:00`, atau `null` jika dikosongkan.
+
+## 4. Migrasi Permission untuk Editor
+
+Migrasi `0004_create_editor_group` mencari permission `change_skill` dan `change_experience` saat database baru dibuat, padahal Django baru membuat baris Permission setelah semua migrasi selesai (sinyal `post_migrate`). Akibatnya Group Editor ada tetapi tanpa izin apa pun, dan Editor ditolak (403) saat mengedit pada database baru, seperti database pengujian dan kemungkinan database produksi. Migrasi `0005_ensure_editor_permissions` memperbaikinya: membuat Permission aplikasi `main` terlebih dulu, lalu menambahkannya ke Group Editor dengan `add()` (izin tambahan yang diberikan lewat admin tidak terhapus). `0006_merge_...` dibuat untuk menyatukan cabang migrasi setelah sempat terjadi konflik antara `0004` dan `0005`.
+
+## 5. Fitur Tambahan: Statistik di Halaman Utama
+
+Halaman utama mendapat bagian "Statistik Portofolio" di bawah profil. Datanya dihitung di server oleh `get_portfolio_stats()` saat halaman dibuka, tanpa JavaScript tambahan.
+
+* Empat kartu angka: jumlah Skill, jumlah Experience, Experience yang sedang berlangsung, dan total star.
+* Skill dan Experience terpopuler beserta jumlah star-nya. Jika jumlah star seri, dipilih judul pertama menurut abjad. Judulnya menjadi link ke halaman daftar dengan pencarian judul yang sudah terisi.
+* Statistik terlihat oleh pengunjung tanpa login. Isinya hanya angka dan judul item, tanpa username, dan judul di-escape oleh template Django.
+* Style memakai variabel warna tema yang sudah ada sehingga ikut menyesuaikan di dark mode.
+
+## 6. Pengujian Otomatis
+
+Dua file test baru, dijalankan dengan `python manage.py test main.tests_api main.tests_stats`.
+
+* `tests_api.py` : satu set test yang dijalankan untuk `Skill` dan `Experience` sekaligus. Mencakup baca publik, pencarian dan filter kategori, jumlah query yang konstan, penolakan tulis untuk pengunjung dan pengguna biasa, Editor yang boleh PUT/PATCH tetapi ditolak saat create dan delete, alur empat peran, GET/OPTIONS yang tidak mengubah data, validasi dan pembersihan HTML, field read-only, star (toggle, filter `starred`, username tidak bocor), serta CSRF pada autentikasi sesi.
+* `tests_stats.py` : database kosong, hitungan dan item terpopuler, pemutus seri, akses tanpa login tanpa kebocoran username, dan escaping judul.
+
+## 7. Perbaikan Bug
+
+* Tombol Edit rusak karena `.button-edit { width: 14%; margin-top: 0.5rem; }`. Diganti `width: auto; margin-top: 0`.
+* Nama pemilik di header terlalu dekat dengan menu dan terpecah menjadi tiga baris. Header dan navigasi diberi `flex-wrap` dan `gap`, brand diberi `white-space: nowrap`.
+* Tombol star terlalu dekat dengan teks status (Ongoing/Completed). Diberi jarak dan `align-self: flex-start`.
+* Pada dark mode, judul dan label di dalam modal tampil hitam di atas latar gelap. Penyebabnya elemen `[popover]` memakai warna bawaan browser (`CanvasText`) dan tidak mewarisi `--ink`. Diperbaiki dengan `color: var(--ink)` pada keempat modal, ditambah `color-scheme` per tema agar kontrol bawaan browser (pemilih tanggal, dropdown, scrollbar) ikut gelap.
+* Grup Editor tanpa izin pada database baru, diperbaiki lewat migrasi `0005` (lihat bagian 4).
+* `show_experience` ternyata didefinisikan dua kali di `views.py`. Duplikatnya dihapus.
+* Fungsi `showToast` lokal yang hanya mencetak ke console dan `escapeHtml` yang tertulis dua kali dihapus dari script halaman, sehingga toast dari `toast.js` yang dipakai.
+
+### Tugas 6
+
+1. Representational State Transfer (REST) adalah architectural style web yang memungkinkan aplikasi software berbeda untuk berkomunikasi melalui internet. REST memiliki prinsip-prinsip berupa antarmuka yang seragam, pemisahan antara client dan server, server tidak menyimpan state session (statelessness), cacheability, dan sistem yang berlapis.
+JSON saja belum cukup untuk membuat sebuah API RESTful karena resourcenya masih berupa kata kerja di URL padahal seharusnya kata benda, method HTTPnya belum tentu menggunakan PUT PATCH DELETE, dan status code nya belum tentu bermakna semua. Ketiga tersebut diperlukan agar suatu API disebut sebagai RESTful.
+PUT mengirimkan representasi lengkap dari suatu resource, sedangkan PATCH hanya mengirimkan field yang berubah (`partial=True`). PUT biasanya digunakan untuk form edit yang mengirim semua field atau sinkronisasi yang menimpa seluruh data, sedangkan PATCH biasanya digunakan untuk mengganti satu elemen saja seperti judul.
+
+2. Serializer berguna untuk melakukan serialisasi, yaitu mengubah model atau queryset menjadi tipe Python sederhana dan merendernya menjadi JSON. Serializer juga memungkinkan dilakukannya deserialisasi, validasi data dan whitelist field.
+Serializer unggul dibanding dictionary manual dengan JsonResponse karena menyediakan hanya satu sumber kebenaran, menghindari bug manual, memungkinkan penggunaan ulang validasi, menetapkan query agar tetap efisien, memudahkan pengujian, dan memiliki fleksibilitas lebih tinggi.
+
+3. Autentikasi terkait dengan siapa yang menggunakan, sedangkan otorisasi terkait apa yang pengguna tertentu boleh lakukan (permissions-nya). Untuk autentikasi, Django menjalankan `authentication_classes` dan mengisi `request.user`. Sedangkan otorisasi dilakukan dengan menjalankan `permission_classes` setelah autentikasi. Di proyek ini, `isAuthenticated` untuk star, `IsPortfolioOwnerOrEditorOrReadOnly(Model)` untuk update dan delete menggunakan `has_perm("main.change_skill")`, dan lainnya.
+Pemeriksaan hak akses harus dilakukan di server karena template hanya memberikan kenyamanan tanpa menyediakan keamanan, endpoint tetap ada meskipun tombolnya tidak ada (tetap bisa diakses), dan izin pengguna dapat dicabut setelah halaman dimuat. Sebaiknya yang dilakukan adalah menghilangkan tombol dan menyediakan keamanan pada server.
+
+4. Token CSRF tetap diperlukan meskipun ada `SessionAuthentication` karena browser menempelkan cookie `sessionid` secara otomatis ke setiap request ke domain kita, termasuk request yang ditimbulkan dari halaman situs lain. Dengan itu, penyerang dapat membuat halaman di web lain yang mengirim POST atau DELETE secara tersembunyi ke API kita, dan browser juga akan mengirim session-nya. Server akan melihatnya sebagai request dari pengguna sah yang login sehingga request tersebut akan berhasil menyusup ke situs kita jika tidak ditangani dengan token CSRF atau keamanan lainnya.
+Test yang menggunakan `force_authenticate` tidak cukup untuk membuktikan perlindungan CSRF karena `force_authenticate(user)` melewati proses autentikasi dan test client Django mematikan CSRF secara default sehingga test tersebut akan tetap lolos meskipun perlindungan CSRF tidak berfungsi. Untuk membuktikan aktifnya perlindungan CSRF, test harus menggunakan `APIClient(enforce_csrf_checks=True)` dan `client.login(...)`, POST tanpa token harus ditolak dengan kode 403, dan POST dengan token yang diambil dari halaman yang merender harus berhasil dengan kode 201.
+
+AI Disclosure:
+Menggunakan Claude Sonnet 5.5 Medium untuk membantu memahami materi terkait keamanan, REST dan RESTful APIs, serializer, dan lainnya. AI tersebut juga digunakan untuk membantu menerapkan fitur tambahan dan menyesuaikan kode tutorial dengan kode saya terkait serializer, permissions, API view, dan testing serta integrasi yang saya sesuaikan dan debug setelahnya, terutama saat ada yang menjadi rusak seperti elemen UI/UX (seperti teks form) yang menjadi berantakan pada kondisi tertentu seperti menghidupkan dark mode. 
+
+Link Log Chat AI: (Diisi sendiri)
