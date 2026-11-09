@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.core import serializers
+from django.db.models import Q
 from django.db.models.aggregates import Count
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -58,6 +59,32 @@ def logout_user(request):
 
 # Main
 
+def _top_starred(model):
+    """Item dengan star terbanyak (seri: urut judul). None jika belum ada star."""
+    return (
+        model.objects.annotate(star_count=Count("starred_by"))
+        .filter(star_count__gt=0)
+        .order_by("-star_count", "title", "id")
+        .first()
+    )
+
+def get_portfolio_stats():
+    """Statistik publik portofolio: hanya angka dan judul item, tanpa data pengguna."""
+    experience_totals = Experience.objects.aggregate(
+        total=Count("id"),
+        ongoing=Count("id", filter=Q(ended_at__isnull=True)),
+    )
+    skill_stars = Skill.starred_by.through.objects.count()
+    experience_stars = Experience.starred_by.through.objects.count()
+    return {
+        "skill_count": Skill.objects.count(),
+        "experience_count": experience_totals["total"],
+        "ongoing_count": experience_totals["ongoing"],
+        "total_stars": skill_stars + experience_stars,
+        "top_skill": _top_starred(Skill),
+        "top_experience": _top_starred(Experience),
+    }
+
 def show_main(request):
     last_login = request.COOKIES.get('last_login', 'Belum ada sesi login / Cookie tidak ditemukan')
     context = {
@@ -69,6 +96,7 @@ def show_main(request):
             "and delve into Machine Learning (ML) & AI."
         ),
         "last_login": last_login,
+        "stats": get_portfolio_stats(),
     }
     return render(request, "index.html", context)
 

@@ -39,5 +39,51 @@
                 </div>
             </div>
         </section>
+
+        <section class="stats" id="stats" aria-labelledby="stats-title">
+            <div class="container">
+                <h2 id="stats-title" class="stats-title">Statistik Portofolio</h2>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-value">{{ stats.skill_count }}</span>
+                        <span class="stat-label">Skill</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value">{{ stats.experience_count }}</span>
+                        <span class="stat-label">Experience</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value">{{ stats.ongoing_count }}</span>
+                        <span class="stat-label">Sedang berlangsung</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value">{{ stats.total_stars }}</span>
+                        <span class="stat-label">Total star</span>
+                    </div>
+                </div>
+
+                <ul class="stats-highlights">
+                    <li>
+                        <span class="stat-label">Skill terpopuler</span>
+                        {% if stats.top_skill %}
+                            <a href="{% url 'main:show_skill' %}?title={{ stats.top_skill.title|urlencode }}">{{ stats.top_skill.title }}</a>
+                            <span class="stat-star">&#9733; {{ stats.top_skill.star_count }}</span>
+                        {% else %}
+                            <span class="stats-empty">Belum ada star</span>
+                        {% endif %}
+                    </li>
+                    <li>
+                        <span class="stat-label">Experience terpopuler</span>
+                        {% if stats.top_experience %}
+                            <a href="{% url 'main:show_experience' %}?title={{ stats.top_experience.title|urlencode }}">{{ stats.top_experience.title }}</a>
+                            <span class="stat-star">&#9733; {{ stats.top_experience.star_count }}</span>
+                        {% else %}
+                            <span class="stats-empty">Belum ada star</span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+        </section>
     </main>
 {% endblock content %}
