@@ -407,4 +407,4 @@ Test yang menggunakan `force_authenticate` tidak cukup untuk membuktikan perlind
 AI Disclosure:
 Menggunakan Claude Sonnet 5.5 Medium untuk membantu memahami materi terkait keamanan, REST dan RESTful APIs, serializer, dan lainnya. AI tersebut juga digunakan untuk membantu menerapkan fitur tambahan dan menyesuaikan kode tutorial dengan kode saya terkait serializer, permissions, API view, dan testing serta integrasi yang saya sesuaikan dan debug setelahnya, terutama saat ada yang menjadi rusak seperti elemen UI/UX (seperti teks form) yang menjadi berantakan pada kondisi tertentu seperti menghidupkan dark mode. 
 
-Link Log Chat AI: (Diisi sendiri)
+Link Log Chat AI: https://claude.ai/share/b1a5464d-e43e-44ed-b65b-9dada64af40d
