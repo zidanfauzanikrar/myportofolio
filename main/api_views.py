@@ -1,8 +1,7 @@
 from django.db.models import Count, Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.authentication import SessionAuthentication
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -95,42 +94,36 @@ def _toggle_star(request, pk, model, serializer_class):
 
 
 @api_view(["GET", "HEAD", "POST"])
-@authentication_classes([SessionAuthentication])
 @permission_classes([IsPortfolioOwnerOrReadOnly])
 def experience_list(request):
     return _list_or_create(request, Experience, ExperienceSerializer)
 
 
 @api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
-@authentication_classes([SessionAuthentication])
 @permission_classes([IsPortfolioOwnerOrEditorOrReadOnly(Experience)])
 def experience_detail(request, pk):
     return _detail(request, pk, Experience, ExperienceSerializer)
 
 
 @api_view(["GET", "HEAD", "POST"])
-@authentication_classes([SessionAuthentication])
 @permission_classes([IsPortfolioOwnerOrReadOnly])
 def skill_list(request):
     return _list_or_create(request, Skill, SkillSerializer)
 
 
 @api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
-@authentication_classes([SessionAuthentication])
 @permission_classes([IsPortfolioOwnerOrEditorOrReadOnly(Skill)])
 def skill_detail(request, pk):
     return _detail(request, pk, Skill, SkillSerializer)
 
 
 @api_view(["POST"])
-@authentication_classes([SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def experience_star(request, pk):
     return _toggle_star(request, pk, Experience, ExperienceSerializer)
 
 
 @api_view(["POST"])
-@authentication_classes([SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def skill_star(request, pk):
     return _toggle_star(request, pk, Skill, SkillSerializer)
