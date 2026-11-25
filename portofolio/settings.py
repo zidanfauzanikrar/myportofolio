@@ -14,7 +14,10 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "zidan-fauzan-myportofolio.pws.cs.ui.ac.id"]
+ALLOWED_HOSTS = ["localhost", 
+                 "127.0.0.1", 
+                 "zidan-fauzan-myportofolio.pws.cs.ui.ac.id",
+                 "10.0.2.2",]
 
 CSRF_TRUSTED_ORIGINS = ["https://zidan-fauzan-myportofolio.pws.cs.ui.ac.id"]
 
