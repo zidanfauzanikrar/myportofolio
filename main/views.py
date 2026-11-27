@@ -9,11 +9,10 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.views.decorators.http import require_POST
+from django.utils import timezone
 
 from main.models import Experience, Skill
 from main.forms import ExperienceForm, SkillForm
-
-import datetime
 
 name = "Zidan Fauzan Ikrar"
 
@@ -70,9 +69,13 @@ def _top_starred(model):
 
 def get_portfolio_stats():
     """Statistik publik portofolio: hanya angka dan judul item, tanpa data pengguna."""
+    now = timezone.now()
     experience_totals = Experience.objects.aggregate(
         total=Count("id"),
-        ongoing=Count("id", filter=Q(ended_at__isnull=True)),
+        ongoing=Count(
+            "id",
+            filter=Q(ended_at__isnull=True) | Q(ended_at__gt=now),
+        ),
     )
     skill_stars = Skill.starred_by.through.objects.count()
     experience_stars = Experience.starred_by.through.objects.count()

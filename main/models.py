@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 class Experience(models.Model):
     EXPERIENCE_CHOICES = [
@@ -29,7 +30,8 @@ class Experience(models.Model):
     
     @property
     def is_ongoing(self):
-        return self.ended_at is None
+        """Berlangsung bila belum ada tanggal selesai, atau tanggalnya di masa depan."""
+        return self.ended_at is None or self.ended_at > timezone.now()
 
 class Skill(models.Model):
     SKILL_CHOICES = [
